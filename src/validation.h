@@ -14,6 +14,7 @@
 #include "chain.h"
 #include "coins.h"
 #include "protocol.h" // For CMessageHeader::MessageStartChars
+#include "primitives/sidechain.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
@@ -33,6 +34,7 @@
 #include <boost/filesystem/path.hpp>
 
 class CBlockIndex;
+class CSidechainTreeDB;
 class CBlockTreeDB;
 class CBloomFilter;
 class CChainParams;
@@ -43,6 +45,7 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 struct ChainTxData;
+class SidechainDB;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
@@ -277,7 +280,6 @@ std::string GetWarnings(const std::string& strFor);
 bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
 
 /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */
 double GuessVerificationProgress(const ChainTxData& data, CBlockIndex* pindex);
@@ -536,6 +538,9 @@ extern CCoinsViewCache *pcoinsTip;
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern CBlockTreeDB *pblocktree;
 
+/** Global variable that points to the active sidechain tree (protected by cs_main) */
+extern CSidechainTreeDB *psidechaintree;
+
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().
  * While checking, GetBestBlock() refers to the parent block. (protected by cs_main)
@@ -567,5 +572,8 @@ void DumpMempool();
 
 /** Load the mempool from disk. */
 bool LoadMempool();
+
+/** Track sidechain WT^ workscores */
+extern SidechainDB scdb;
 
 #endif // BITCOIN_VALIDATION_H

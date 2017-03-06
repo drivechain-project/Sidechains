@@ -23,6 +23,7 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
+#include "sidechaindb.h"
 #include "timedata.h"
 #include "tinyformat.h"
 #include "txdb.h"
@@ -65,6 +66,7 @@ int nScriptCheckThreads = 0;
 std::atomic_bool fImporting(false);
 bool fReindex = false;
 bool fTxIndex = false;
+bool fSidechainIndex = true;
 bool fHavePruned = false;
 bool fPruneMode = false;
 bool fIsBareMultisigStd = DEFAULT_PERMIT_BAREMULTISIG;
@@ -89,6 +91,8 @@ static void CheckBlockIndex(const Consensus::Params& consensusParams);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+
+SidechainDB scdb;
 
 // Internal stuff
 namespace {
@@ -208,6 +212,7 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
 
 CCoinsViewCache *pcoinsTip = NULL;
 CBlockTreeDB *pblocktree = NULL;
+CSidechainTreeDB *psidechaintree = NULL;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -1163,19 +1168,6 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return true;
 }
 
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
-{
-    int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
-    // Force block reward to zero when right shift is undefined.
-    if (halvings >= 64)
-        return 0;
-
-    CAmount nSubsidy = 50 * COIN;
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
-    nSubsidy >>= halvings;
-    return nSubsidy;
-}
-
 bool IsInitialBlockDownload()
 {
     const CChainParams& chainParams = Params();
@@ -1894,6 +1886,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             }
         }
 
+        // Look for individual wt(s)
+        if (!fJustCheck && tx.IsSidechainWT())
+            scdb.AddSidechainWT(tx);
+
         // GetTransactionSigOpCost counts 3 types of sigops:
         // * legacy (always)
         // * p2sh (when P2SH enabled in flags and excludes coinbase)
@@ -1928,13 +1924,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
 
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0]->GetValueOut() > blockReward)
-        return state.DoS(100,
-                         error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0]->GetValueOut(), blockReward),
-                               REJECT_INVALID, "bad-cb-amount");
-
     if (!control.Wait())
         return state.DoS(100, false);
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
@@ -1965,6 +1954,35 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))
             return AbortNode(state, "Failed to write transaction index");
+
+    if (fSidechainIndex) {
+        // Collect sidechain objects
+        std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
+        for (const CTransactionRef &tx : block.vtx) {
+            for (const CTxOut& txout : tx->vout) {
+                const CScript& scriptPubKey = txout.scriptPubKey;
+                size_t script_sz = scriptPubKey.size();
+                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+                    continue;
+
+                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                if (!obj)
+                    continue;
+
+                obj->txid = tx->GetHash();
+                vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
+            }
+        }
+        // Write sidechain objects to db
+        if (vSidechainObjects.size()) {
+            bool ret = psidechaintree->WriteSidechainIndex(vSidechainObjects);
+            if (!ret)
+                return state.Error("Failed to write sidechain index!");
+
+            for (size_t i = 0; i < vSidechainObjects.size(); i++)
+                delete vSidechainObjects[i].second;
+        }
+    }
 
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
@@ -2062,6 +2080,9 @@ bool static FlushStateToDisk(CValidationState &state, FlushStateMode mode, int n
             }
             if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                 return AbortNode(state, "Failed to write to block index database");
+            }
+            if (!psidechaintree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
+                return AbortNode(state, "Failed to write to sidechain database");
             }
         }
         // Finally remove any pruned files
@@ -3824,6 +3845,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
     // Use the provided setting for -txindex in the new database
     fTxIndex = GetBoolArg("-txindex", DEFAULT_TXINDEX);
     pblocktree->WriteFlag("txindex", fTxIndex);
+    psidechaintree->WriteFlag("sidechain", fSidechainIndex);
     LogPrintf("Initializing databases...\n");
 
     // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)

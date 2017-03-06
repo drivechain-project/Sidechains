@@ -379,6 +379,15 @@ public:
         return (vin.size() == 1 && vin[0].prevout.IsNull());
     }
 
+    bool IsSidechainWT() const
+    {
+        for (size_t i = 0; i < vout.size(); i++) {
+            if (vout[i].scriptPubKey.IsWTScript())
+                return true;
+        }
+        return false;
+    }
+
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
         return a.hash == b.hash;
@@ -428,6 +437,9 @@ struct CMutableTransaction
     CMutableTransaction(deserialize_type, Stream& s) {
         Unserialize(s);
     }
+
+    // Return sum of txouts to WT scripts
+    CAmount GetValueOutToWT() const;
 
     /** Compute the hash of this CMutableTransaction. This is computed on the
      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.

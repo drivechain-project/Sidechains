@@ -211,3 +211,136 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
 
     return true;
 }
+
+CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) {
+}
+
+bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& fileinfo) {
+    return Read(make_pair(DB_BLOCK_FILES, nFile), fileinfo);
+}
+
+bool CSidechainTreeDB::WriteReindexing(bool fReindex) {
+    if (fReindex)
+        return Write(DB_REINDEX_FLAG, '1');
+    else
+        return Erase(DB_REINDEX_FLAG);
+}
+
+bool CSidechainTreeDB::ReadReindexing(bool& fReindex) {
+    fReindex = Exists(DB_REINDEX_FLAG);
+    return true;
+}
+
+bool CSidechainTreeDB::ReadLastBlockFile(int& nFile) {
+    return Read(DB_LAST_BLOCK, nFile);
+}
+
+bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo, int nLastFile, const std::vector<const CBlockIndex *> &blockinfo) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
+        batch.Write(make_pair(DB_BLOCK_FILES, it->first), *it->second);
+    }
+    batch.Write(DB_LAST_BLOCK, nLastFile);
+    for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
+        batch.Write(make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
+    }
+    return WriteBatch(batch, true);
+}
+
+bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list)
+{
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<uint256, const SidechainObj *> >::const_iterator it=list.begin(); it!=list.end(); it++) {
+        const uint256 &objid = it->first;
+        const SidechainObj *obj = it->second;
+        pair<char, uint256> key = make_pair(obj->sidechainop, objid);
+
+        if (obj->sidechainop == 'W') {
+            const SidechainWTJoin *ptr = (const SidechainWTJoin *) obj;
+            pair<SidechainWTJoin, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+            batch.Write(make_pair(make_pair(make_pair('w', ptr->nSidechain), ptr->nHeight), objid), value);
+        }
+        else
+        if (obj->sidechainop == 'D') {
+            const SidechainDeposit *ptr = (const SidechainDeposit *) obj;
+            pair<SidechainDeposit, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+            batch.Write(make_pair(make_pair(make_pair('d', ptr->nSidechain), ptr->nHeight), objid), value);
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue) {
+    return Write(make_pair(DB_FLAG, name), fValue ? '1' : '0');
+}
+
+
+bool CSidechainTreeDB::ReadFlag(const string& name, bool &fValue)
+{
+    char ch;
+    if (!Read(make_pair(DB_FLAG, name), ch))
+        return false;
+    fValue = ch == '1';
+    return true;
+}
+
+bool CSidechainTreeDB::GetWTJoin(const uint256& objid, SidechainWTJoin& wtJoin) {
+    if (ReadSidechain(make_pair('W', objid), wtJoin))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::GetDeposit(const uint256& objid, SidechainDeposit& deposit) {
+    if (ReadSidechain(make_pair('D', objid), deposit))
+        return true;
+
+    return false;
+}
+
+vector<SidechainWTJoin> CSidechainTreeDB::GetWTJoins(const uint8_t& nSidechain) {
+    const char withdrawop = 'W';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(withdrawop, nSidechain), uint256()));
+
+    vector<SidechainWTJoin> vWTJoin;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        SidechainWTJoin wtJoin;
+        if (pcursor->GetKey(key) && key.first == withdrawop) {
+            if (pcursor->GetSidechainValue(wtJoin))
+                vWTJoin.push_back(wtJoin);
+        }
+    }
+
+    return vWTJoin;
+}
+
+vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain) {
+    // TODO filter by height
+    const char depositop = 'D';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(depositop, nSidechain), uint256()));
+
+    vector<SidechainDeposit> vDeposit;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        SidechainDeposit deposit;
+        if (pcursor->GetKey(key) && key.first == depositop) {
+            if (pcursor->GetSidechainValue(deposit))
+                vDeposit.push_back(deposit);
+        }
+    }
+
+    return vDeposit;
+}

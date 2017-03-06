@@ -20,6 +20,7 @@
 #include "optionsmodel.h"
 #include "platformstyle.h"
 #include "rpcconsole.h"
+#include "sidechainpage.h"
 #include "utilitydialog.h"
 
 #ifdef ENABLE_WALLET
@@ -92,6 +93,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     progressBar(0),
     progressDialog(0),
     appMenuBar(0),
+    sidechainAction(0),
     overviewAction(0),
     historyAction(0),
     quitAction(0),
@@ -276,18 +278,25 @@ void BitcoinGUI::createActions()
 {
     QActionGroup *tabGroup = new QActionGroup(this);
 
+    sidechainAction = new QAction(platformStyle->SingleColorIcon(":/icons/tx_inout"), tr("&Sidechain"), this);
+    sidechainAction->setStatusTip(tr("View sidechain history / status & make withdraw requests"));
+    sidechainAction->setToolTip(sidechainAction->statusTip());
+    sidechainAction->setCheckable(true);
+    sidechainAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
+    tabGroup->addAction(sidechainAction);
+
     overviewAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Overview"), this);
     overviewAction->setStatusTip(tr("Show general overview of wallet"));
     overviewAction->setToolTip(overviewAction->statusTip());
     overviewAction->setCheckable(true);
-    overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
+    overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
     tabGroup->addAction(overviewAction);
 
     sendCoinsAction = new QAction(platformStyle->SingleColorIcon(":/icons/send"), tr("&Send"), this);
     sendCoinsAction->setStatusTip(tr("Send coins to a Bitcoin address"));
     sendCoinsAction->setToolTip(sendCoinsAction->statusTip());
     sendCoinsAction->setCheckable(true);
-    sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
+    sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(sendCoinsAction);
 
     sendCoinsMenuAction = new QAction(platformStyle->TextColorIcon(":/icons/send"), sendCoinsAction->text(), this);
@@ -298,7 +307,7 @@ void BitcoinGUI::createActions()
     receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and bitcoin: URIs)"));
     receiveCoinsAction->setToolTip(receiveCoinsAction->statusTip());
     receiveCoinsAction->setCheckable(true);
-    receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
+    receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
     tabGroup->addAction(receiveCoinsAction);
 
     receiveCoinsMenuAction = new QAction(platformStyle->TextColorIcon(":/icons/receiving_addresses"), receiveCoinsAction->text(), this);
@@ -309,12 +318,14 @@ void BitcoinGUI::createActions()
     historyAction->setStatusTip(tr("Browse transaction history"));
     historyAction->setToolTip(historyAction->statusTip());
     historyAction->setCheckable(true);
-    historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
+    historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(historyAction);
 
 #ifdef ENABLE_WALLET
     // These showNormalIfMinimized are needed because Send Coins and Receive Coins
     // can be triggered from the tray menu, and need to show the GUI to be useful.
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(gotoSidechainPage()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -456,6 +467,8 @@ void BitcoinGUI::createToolBars()
         QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
         toolbar->setMovable(false);
         toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        toolbar->addAction(sidechainAction);
+        toolbar->addSeparator();
         toolbar->addAction(overviewAction);
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
@@ -551,6 +564,7 @@ void BitcoinGUI::removeAllWallets()
 
 void BitcoinGUI::setWalletActionsEnabled(bool enabled)
 {
+    sidechainAction->setEnabled(enabled);
     overviewAction->setEnabled(enabled);
     sendCoinsAction->setEnabled(enabled);
     sendCoinsMenuAction->setEnabled(enabled);
@@ -673,6 +687,12 @@ void BitcoinGUI::openClicked()
     {
         Q_EMIT receivedURI(dlg.getURI());
     }
+}
+
+void BitcoinGUI::gotoSidechainPage()
+{
+    sidechainAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoSidechainPage();
 }
 
 void BitcoinGUI::gotoOverviewPage()

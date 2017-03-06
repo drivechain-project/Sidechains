@@ -14,6 +14,7 @@
 #include "platformstyle.h"
 #include "receivecoinsdialog.h"
 #include "sendcoinsdialog.h"
+#include "sidechainpage.h"
 #include "signverifymessagedialog.h"
 #include "transactiontablemodel.h"
 #include "transactionview.h"
@@ -36,6 +37,8 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     platformStyle(_platformStyle)
 {
     // Create tabs
+    sidechainPage = new SidechainPage(this);
+
     overviewPage = new OverviewPage(platformStyle);
 
     transactionsPage = new QWidget(this);
@@ -59,6 +62,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     usedSendingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::SendingTab, this);
     usedReceivingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::ReceivingTab, this);
 
+    addWidget(sidechainPage);
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
@@ -118,6 +122,7 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
     this->walletModel = _walletModel;
 
     // Put transaction list in tabs
+    sidechainPage->setWalletModel(_walletModel);
     transactionView->setModel(_walletModel);
     overviewPage->setWalletModel(_walletModel);
     receiveCoinsPage->setModel(_walletModel);
@@ -167,6 +172,11 @@ void WalletView::processNewTransaction(const QModelIndex& parent, int start, int
     QString label = ttm->data(index, TransactionTableModel::LabelRole).toString();
 
     Q_EMIT incomingTransaction(date, walletModel->getOptionsModel()->getDisplayUnit(), amount, type, address, label);
+}
+
+void WalletView::gotoSidechainPage()
+{
+    setCurrentWidget(sidechainPage);
 }
 
 void WalletView::gotoOverviewPage()
