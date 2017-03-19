@@ -5,6 +5,7 @@
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
+#include "merkleblock.h"
 #include "primitives/transaction.h"
 #include "pubkey.h"
 #include "script/script.h"
@@ -51,7 +52,7 @@ static const int SIDECHAIN_MAX_WT = 3;
 static const int SIDECHAIN_STATE_VERSION = 0;
 
 /**
- * Sidechain object for database
+ * Base object for sidechain related database entries
  */
 struct SidechainObj {
     char sidechainop;
@@ -67,13 +68,37 @@ struct SidechainObj {
 };
 
 /**
- * Sidechain withdraw proposal added to database
+ * Sidechain individual withdrawal (WT) database object
+ */
+struct SidechainWT: public SidechainObj {
+    uint8_t nSidechain;
+    CKeyID keyID;
+    CMutableTransaction wt;
+
+    SidechainWT(void) : SidechainObj() { sidechainop = 'W'; }
+    virtual ~SidechainWT(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(sidechainop);
+        READWRITE(nSidechain);
+        READWRITE(keyID);
+        READWRITE(wt);
+    }
+
+    string ToString(void) const;
+};
+
+/**
+ * Sidechain joined withdraw proposal (WT^) database object
  */
 struct SidechainWTJoin: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtJoin;
 
-    SidechainWTJoin(void) : SidechainObj() { sidechainop = 'W'; }
+    SidechainWTJoin(void) : SidechainObj() { sidechainop = 'J'; }
     virtual ~SidechainWTJoin(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -89,12 +114,14 @@ struct SidechainWTJoin: public SidechainObj {
 };
 
 /**
- * Sidechain deposit added to database
+ * Sidechain deposit database object
  */
 struct SidechainDeposit : public SidechainObj {
     uint8_t nSidechain;
     CKeyID keyID;
+    CAmount amtUserPayout;
     CMutableTransaction dtx;
+    CMerkleBlock mbProof;
 
     SidechainDeposit(void) : SidechainObj() { sidechainop = 'D'; }
     virtual ~SidechainDeposit(void) { }
@@ -105,8 +132,10 @@ struct SidechainDeposit : public SidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
-        READWRITE(dtx);
         READWRITE(keyID);
+        READWRITE(amtUserPayout);
+        READWRITE(dtx);
+        READWRITE(mbProof);
     }
 
     string ToString(void) const;

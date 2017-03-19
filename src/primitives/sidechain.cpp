@@ -18,6 +18,9 @@ uint256 SidechainObj::GetHash(void) const
 {
     uint256 ret;
     if (sidechainop == 'W')
+        ret = SerializeHash(*(SidechainWT *) this);
+    else
+    if (sidechainop == 'J')
         ret = SerializeHash(*(SidechainWTJoin *) this);
     else
     if (sidechainop == 'D')
@@ -29,8 +32,10 @@ uint256 SidechainObj::GetHash(void) const
 CScript SidechainObj::GetScript(void) const
 {
     CDataStream ds (SER_DISK, CLIENT_VERSION);
-
     if (sidechainop == 'W')
+        ((SidechainWT *) this)->Serialize(ds);
+    else
+    if (sidechainop == 'J')
         ((SidechainWTJoin *) this)->Serialize(ds);
     else
     if (sidechainop == 'D')
@@ -55,6 +60,12 @@ SidechainObj *SidechainObjCtr(const CScript &script)
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
     if (*vch0 == 'W') {
+        SidechainWT *obj = new SidechainWT;
+        obj->Unserialize(ds);
+        return obj;
+    }
+    else
+    if (*vch0 == 'J') {
         SidechainWTJoin *obj = new SidechainWTJoin;
         obj->Unserialize(ds);
         return obj;
@@ -69,6 +80,15 @@ SidechainObj *SidechainObjCtr(const CScript &script)
 }
 
 string SidechainObj::ToString(void) const
+{
+    stringstream str;
+    str << "sidechainop=" << sidechainop << endl;
+    str << "nHeight=" << nHeight << endl;
+    str << "txid=" << txid.GetHex() << endl;
+    return str.str();
+}
+
+string SidechainWT::ToString() const
 {
     stringstream str;
     str << "sidechainop=" << sidechainop << endl;
@@ -92,8 +112,5 @@ string SidechainDeposit::ToString() const
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
-    str << "nSidechain=" << (unsigned int)nSidechain << endl;
-    str << "dtx=" << CTransaction(dtx).ToString() << endl;
-    str << "keyID=" << keyID.GetHex() << endl;
     return str.str();
 }

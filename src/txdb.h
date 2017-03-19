@@ -134,9 +134,11 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
 
+    bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTJoin(const uint256 & /* WT^ ID */, SidechainWTJoin &wtJoin);
     bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
 
+    vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
     vector<SidechainWTJoin> GetWTJoins(const uint8_t & /* nSidechain */);
     vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
 };
