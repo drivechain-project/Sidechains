@@ -9,12 +9,13 @@
 #include "bitcoinunits.h"
 #include "coins.h"
 #include "consensus/validation.h"
+#include "core_io.h"
 #include "guiconstants.h"
 #include "guiutil.h"
 #include "init.h"
 #include "net.h"
 #include "optionsmodel.h"
-#include "sidechaindb.h"
+#include "primitives/sidechain.h"
 #include "txdb.h"
 #include "validation.h"
 #include "wallet/wallet.h"
@@ -148,6 +149,7 @@ void SidechainPage::on_pushButtonNew_clicked()
 
 void SidechainPage::on_pushButtonWT_clicked()
 {
+    // TODO better error messages
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
@@ -159,6 +161,7 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
+    // Check WT amount
     if (!validateWTAmount()) {
         // Invalid withdrawal amount message box
         messageBox.setWindowTitle("Invalid withdrawal amount!");
@@ -167,7 +170,7 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Get KeyID
+    // Check KeyID
     CKeyID keyID;
     CBitcoinAddress address(ui->payTo->text().toStdString());
     if (!address.GetKeyID(keyID)) {
@@ -178,22 +181,62 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Send payment to wt script
-    std::vector<CRecipient> vecSend;
-    CScript script = CScript() << OP_WT << ToByteVector(keyID.GetHex());
-    const CAmount& withdrawAmt = ui->payAmount->value();
-    CRecipient recipient = {script, withdrawAmt, false};
-    vecSend.push_back(recipient);
+    // WT burn transaction
+    std::vector<CRecipient> vBurnRecipient;
+    CAmount nBurn = ui->payAmount->value();
+    CRecipient burnRecipient = {CScript() << OP_RETURN, nBurn, false};
+    vBurnRecipient.push_back(burnRecipient);
+
+    CWalletTx bwtx;
+    CReserveKey burnKey(pwalletMain);
+    CAmount nBurnFee;
+    int nBurnChangePos = -1;
+    std::string strError;
+    if (!pwalletMain->CreateTransaction(vBurnRecipient, bwtx, burnKey, nBurnFee, nBurnChangePos, strError))
+    {
+        // Create burn transaction error message box
+        messageBox.setWindowTitle("Creating withdraw burn transaction failed!");
+        QString createError = "Error creating transaction: ";
+        createError += QString::fromStdString(strError);
+        createError += "\n";
+        messageBox.setText(createError);
+        messageBox.exec();
+        return;
+    }
+
+    CValidationState burnState;
+    if (!pwalletMain->CommitTransaction(bwtx, burnKey, g_connman.get(), burnState))
+    {
+        // Commit burn transaction error message box
+        messageBox.setWindowTitle("Committing withdraw burn transaction failed!");
+        QString commitError = "Error committing transaction: ";
+        commitError += QString::fromStdString(burnState.GetRejectReason());
+        commitError += "\n";
+        messageBox.setText(commitError);
+        messageBox.exec();
+        return;
+    }
+
+    /* Create WT data transaction */
+    std::vector<CRecipient> vRecipient;
+
+    SidechainWT wt;
+    wt.nSidechain = THIS_SIDECHAIN.nSidechain;
+    wt.keyID = keyID;
+    wt.wt = *bwtx.tx;
+
+    CRecipient recipient = {wt.GetScript(), CENT, false};
+    vRecipient.push_back(recipient);
 
     CWalletTx wtx;
     CReserveKey reserveKey(pwalletMain);
     CAmount nFee;
     int nChangePos = -1;
-    std::string strError;
-    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFee, nChangePos, strError))
+    strError.clear();
+    if (!pwalletMain->CreateTransaction(vRecipient, wtx, reserveKey, nFee, nChangePos, strError))
     {
         // Create transaction error message box
-        messageBox.setWindowTitle("Creating withdraw transaction failed!");
+        messageBox.setWindowTitle("Creating withdraw data transaction failed!");
         QString createError = "Error creating transaction: ";
         createError += QString::fromStdString(strError);
         createError += "\n";
@@ -206,7 +249,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     if (!pwalletMain->CommitTransaction(wtx, reserveKey, g_connman.get(), state))
     {
         // Commit transaction error message box
-        messageBox.setWindowTitle("Committing withdraw transaction failed!");
+        messageBox.setWindowTitle("Committing withdraw data transaction failed!");
         QString commitError = "Error committing transaction: ";
         commitError += QString::fromStdString(state.GetRejectReason());
         commitError += "\n";
@@ -221,7 +264,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     result += "\n";
     result += "Amount withdrawn: ";
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
-    result += BitcoinUnits::formatWithUnit(unit, withdrawAmt, false, BitcoinUnits::separatorAlways);
+    result += BitcoinUnits::formatWithUnit(unit, nBurn, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
 }
