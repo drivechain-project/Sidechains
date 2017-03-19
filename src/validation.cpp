@@ -23,7 +23,6 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
-#include "sidechaindb.h"
 #include "timedata.h"
 #include "tinyformat.h"
 #include "txdb.h"
@@ -46,6 +45,10 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/thread.hpp>
+
+// TODO remove see TODO note in ConnectBlock()
+#include "sidechainclient.h"
+#include "core_io.h"
 
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."
@@ -91,8 +94,6 @@ static void CheckBlockIndex(const Consensus::Params& consensusParams);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
-
-SidechainDB scdb;
 
 // Internal stuff
 namespace {
@@ -1886,10 +1887,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             }
         }
 
-        // Look for individual wt(s)
-        if (!fJustCheck && tx.IsSidechainWT())
-            scdb.AddSidechainWT(tx);
-
         // GetTransactionSigOpCost counts 3 types of sigops:
         // * legacy (always)
         // * p2sh (when P2SH enabled in flags and excludes coinbase)
@@ -1956,9 +1953,21 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             return AbortNode(state, "Failed to write transaction index");
 
     if (fSidechainIndex) {
+
+        // TODO remove
+        {
+            // TODO replaced by BMM, temporarily here for testing
+            // Send latest WT^ to the mainchain each block
+            std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(THIS_SIDECHAIN.nSidechain);
+            if (vWTJoin.size()) {
+                SidechainClient client;
+                client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin));
+            }
+        }
+
         // Collect sidechain objects
         std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
-        for (const CTransactionRef &tx : block.vtx) {
+        for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
                 size_t script_sz = scriptPubKey.size();
@@ -1979,6 +1988,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             if (!ret)
                 return state.Error("Failed to write sidechain index!");
 
+            // Cleanup
             for (size_t i = 0; i < vSidechainObjects.size(); i++)
                 delete vSidechainObjects[i].second;
         }

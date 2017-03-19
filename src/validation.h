@@ -45,7 +45,6 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 struct ChainTxData;
-class SidechainDB;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
@@ -214,6 +213,10 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 // one 128MB block file + added 15% undo data = 147MB greater for a total of 545MB
 // Setting the target to > than 550MB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
+
+/** Sidechain keys */
+static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
+static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
 /** 
  * Process an incoming block. This only returns after the best known valid
@@ -572,8 +575,5 @@ void DumpMempool();
 
 /** Load the mempool from disk. */
 bool LoadMempool();
-
-/** Track sidechain WT^ workscores */
-extern SidechainDB scdb;
 
 #endif // BITCOIN_VALIDATION_H

@@ -89,16 +89,15 @@ CAmount CTransaction::GetValueOut() const
     return nValueOut;
 }
 
-CAmount CMutableTransaction::GetValueOutToWT() const
+CAmount CMutableTransaction::GetValueBurnedForWT() const
 {
-    CAmount nValueOut = 0;
-    for (std::vector<CTxOut>::const_iterator it(vout.begin()); it != vout.end(); ++it)
-    {
-        if (!it->scriptPubKey.IsWTScript())
-            continue;
-        nValueOut += it->nValue;
-        if (!MoneyRange(it->nValue) || !MoneyRange(nValueOut))
-            throw std::runtime_error(std::string(__func__) + ": value out of range");
+    CAmount nValueOut = CAmount(0);
+    for (const CTxOut out : vout) {
+        if (out.scriptPubKey.IsUnspendable()) {
+            nValueOut += out.nValue;
+            if (!MoneyRange(out.nValue) || !MoneyRange(nValueOut))
+                throw std::runtime_error(std::string(__func__) + ": value out of range");
+        }
     }
     return nValueOut;
 }

@@ -21,7 +21,6 @@
 #include "primitives/transaction.h"
 #include "script/standard.h"
 #include "sidechainclient.h"
-#include "sidechaindb.h"
 #include "timedata.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -190,8 +189,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Create WT^
     CTransaction wtJoinTx = CreateWTJoinTx(chainActive.Height() + 1);
-    if (!wtJoinTx.IsNull())
-        scdb.AddSidechainWTJoin(wtJoinTx);
+    for (const CTxOut& out : wtJoinTx.vout)
+        coinbaseTx.vout.push_back(out);
 
     // Create deposit transactions
     CTransaction depositTx = CreateDepositTx();
@@ -640,36 +639,45 @@ CTransaction CreateDepositTx()
     std::vector<SidechainDeposit> vDepositUniq;
     for (const SidechainDeposit& d: vDeposit) {
         SidechainDeposit temp;
-        if (psidechaintree->GetDeposit(d.GetHash(), temp))
-            continue;
-        vDepositUniq.push_back(d);
+        if (!psidechaintree->GetDeposit(d.GetHash(), temp)) {
+            vDepositUniq.push_back(d);
+        }
     }
-
     if (!vDepositUniq.size())
         return CTransaction();
 
-    // Create deposit payout(s) transaction
     CMutableTransaction mtx;
-    for (size_t i = 0; i < vDepositUniq.size(); i++) {
-        for (size_t j = 0; j < vDepositUniq[i].dtx.vout.size(); j++) {
-            const CScript& scriptPubKey = vDepositUniq[i].dtx.vout[j].scriptPubKey;
+    for (const SidechainDeposit& deposit : vDepositUniq) {
+        for (const CTxOut& out : deposit.dtx.vout) {
+            const CScript& scriptPubKey = out.scriptPubKey;
 
-            // Check that this is a workscore script
-            if (!scriptPubKey.size() || scriptPubKey.back() != OP_NOP4)
+            if (scriptPubKey.size() < 2)
                 continue;
-            // Check that the deposit belongs to this sidechain
-            uint8_t nSidechain = (unsigned int)*scriptPubKey.begin();
+            // Double check nSidechain
+            uint8_t nSidechain = (unsigned int)scriptPubKey[1];
             if (nSidechain != THIS_SIDECHAIN.nSidechain)
                 continue;
-            // Check that keyID is not null
-            if (vDepositUniq[i].keyID.IsNull())
+            // Double check that keyID is not null
+            if (deposit.keyID.IsNull())
+                continue;
+            // Is deposit greater than minimum fee?
+            if (deposit.amtUserPayout < CENT)
                 continue;
 
             // Pay keyID the deposit
             CScript script;
-            script << OP_DUP << OP_HASH160 << ToByteVector(vDepositUniq[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-            mtx.vout.push_back(CTxOut(vDepositUniq[i].dtx.vout[j].nValue, script));
-            mtx.vout.push_back(CTxOut(CENT, vDepositUniq[i].GetScript()));
+            script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+            mtx.vout.push_back(CTxOut(deposit.amtUserPayout - CENT, script));
+
+            // Depositor pays fee to sidechain
+            CKeyID sidechainKey;
+            sidechainKey.SetHex(SIDECHAIN_CHANGE_KEY);
+            CScript sidechainChangeScript;
+            sidechainChangeScript << OP_DUP << OP_HASH160 << ToByteVector(sidechainKey) << OP_EQUALVERIFY << OP_CHECKSIG;
+            mtx.vout.push_back(CTxOut(CENT, sidechainChangeScript));
+
+            // Add serialization of deposit
+            mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
         }
     }
     return mtx;
@@ -684,72 +692,59 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     if (nHeight % nTau != 0)
         return CTransaction();
 
-    const std::vector<SidechainWT> vWithdraw = scdb.GetWTCache();
-    if (vWithdraw.empty())
+    // Get WT(s) from psidechaintree
+    const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(s.nSidechain);
+    if (vWT.empty())
         return CTransaction();
 
-    // Add valid WT(s) to WT^
-    CAmount joinAmount = 0;  // Total output - fees
-    CAmount joinFee = 0;     // Total fees
-    CMutableTransaction mtx; // WT^
-    for (size_t i = 0; i < vWithdraw.size(); i++) {
-        CAmount amount = vWithdraw[i].wt.GetValueOutToWT();
+    // TODO filter vWT (by height & used)
+    // Select which WT(s) to join in WT^
+    const std::vector<SidechainWT> vWTFiltered = vWT;
 
-        // Calculate fee (split evenly between sidechain & mainchain)
-        unsigned int nBytes = GetSerializeSize(vWithdraw[i].wt, SER_NETWORK, PROTOCOL_VERSION);
-        CAmount nFee = 2*CWallet::GetMinimumFee(nBytes, 2, mempool);
-
-        amount -= nFee;
-        joinAmount += amount;
-        joinFee += nFee;
+    CAmount joinAmount = 0;  // Total output
+    CMutableTransaction wjtx; // WT^
+    for (const SidechainWT& wt : vWTFiltered) {
+        CAmount amountWT = wt.wt.GetValueBurnedForWT();
+        joinAmount += amountWT;
 
         // Output to mainchain keyID
         CScript script;
-        script << OP_DUP << OP_HASH160 << ToByteVector(vWithdraw[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-        mtx.vout.push_back(CTxOut(amount, script));
+        script << OP_DUP << OP_HASH160 << ToByteVector(wt.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+        wjtx.vout.push_back(CTxOut(amountWT, script));
     }
 
     // Did anything make it into the WT^?
-    if (!mtx.vout.size())
+    if (!wjtx.vout.size())
         return CTransaction();
 
-    // Add join fee (the sidechain half) leave the rest for mainchain miners
-    if (joinFee > 0)
-        mtx.vout.push_back(CTxOut((joinFee / 2), SIDECHAIN_FEESCRIPT));
+    // TODO improve fee calculation
+    CAmount nBaseFee = CENT;
+    // Calculate total group fee to be split evenly between sidechain & mainchain
+    unsigned int nBytes = GetSerializeSize(wjtx, SER_NETWORK, PROTOCOL_VERSION);
+    CAmount nJoinFee = (nBaseFee + 2*CWallet::GetMinimumFee(nBytes, 2, mempool));
+    CAmount nFeePerOutput = nJoinFee / wjtx.vout.size();
 
-    // TODO seperate FundWTJoinTx function
-    // Add inputs to cover WT^
-    std::vector<SidechainDeposit> vDeposit = psidechaintree->GetDeposits(THIS_SIDECHAIN.nSidechain);
-    for (size_t i = 0; i < vDeposit.size(); i++) {
-        if (joinAmount <= 0)
-            break;
+    // TODO drop outputs with < nFeePerOutput nValue & recalculate
+    // Split fee equally among output(s)
+    for (size_t i = 0; i < wjtx.vout.size(); i++)
+        wjtx.vout[i].nValue -= nFeePerOutput;
 
-        for (size_t j = 0; j < vDeposit[i].dtx.vout.size(); j++) {
-            const CScript& scriptPubKey = vDeposit[i].dtx.vout[j].scriptPubKey;
-            if (scriptPubKey.IsWorkScoreScript()) {
-                if (vDeposit[i].nSidechain != THIS_SIDECHAIN.nSidechain)
-                    continue;
-                if (vDeposit[i].keyID.IsNull())
-                    continue;
+    // Pay sidechain miners their half of the join fee,
+    // leaving the rest for the mainchain miners
+    if (nJoinFee > 0)
+        wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
 
-                CAmount depositAmount = vDeposit[i].dtx.vout[j].nValue;
+    wjtx.vin.resize(1);
+    wjtx.vin[0].scriptSig = CScript() << OP_0;
 
-                if ((joinAmount - depositAmount) < 0) {
-                    CAmount change = std::abs(joinAmount - depositAmount);
-                    mtx.vout.push_back(CTxOut(change - joinFee, THIS_SIDECHAIN.depositScript));
-                    joinAmount = (joinAmount - depositAmount) + change;
-                } else {
-                    joinAmount -= depositAmount;
-                }
+    // Create WT^ object
+    SidechainWTJoin wtJoin;
+    wtJoin.nSidechain = s.nSidechain;
+    wtJoin.wtJoin = wjtx;
 
-                CTxIn in(vDeposit[i].dtx.GetHash(), j);
-                mtx.vin.push_back(in);
-            }
-        }
-    }
-
-    if (joinAmount != 0)
-        return CTransaction();
+    // Output data
+    CMutableTransaction mtx;
+    mtx.vout.push_back(CTxOut(0, wtJoin.GetScript()));
 
     return mtx;
 }
