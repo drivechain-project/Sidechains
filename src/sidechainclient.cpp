@@ -5,6 +5,8 @@
 #include "sidechainclient.h"
 
 #include "core_io.h"
+#include "streams.h"
+#include "utilmoneystr.h"
 #include "utilstrencodings.h"
 #include "util.h"
 
@@ -21,6 +23,7 @@ using boost::asio::ip::tcp;
 
 SidechainClient::SidechainClient()
 {
+
 }
 
 bool SidechainClient::BroadcastWTJoin(const std::string& hex)
@@ -28,18 +31,20 @@ bool SidechainClient::BroadcastWTJoin(const std::string& hex)
     // JSON for sending the WT^ to mainchain via HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"receivesidechainwt\", \"params\": ");
+    json.append("\"method\": \"receivesidechainwtjoin\", \"params\": ");
     json.append("[\"");
     json.append(std::to_string(THIS_SIDECHAIN.nSidechain));
     json.append("\",\"");
     json.append(hex);
     json.append("\"] }");
 
-    // TODO Read result, display to user
+    // TODO Read result
+    // the mainchain will return the txid if WT^ has been received
     boost::property_tree::ptree ptree;
     return SendRequestToMainchain(json, ptree);
 }
 
+// TODO return bool & state / fail string
 std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain)
 {
     // List of deposits in sidechain format for DB
@@ -56,8 +61,10 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
 
     // Try to request deposits from mainchain
     boost::property_tree::ptree ptree;
-    if (!SendRequestToMainchain(json, ptree))
-        return incoming; // TODO display error
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request new deposits\n");
+        return incoming;  // TODO return false
+    }
 
     // Process deposits
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
@@ -77,18 +84,6 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
                 deposit.nSidechain = nSidechain;
             }
             else
-            if (v.first == "dtx") {
-                // Read deposit transaction hex
-                std::string data = v.second.data();
-                if (!data.length())
-                    continue;
-                CMutableTransaction dtx;
-                if (!DecodeHexTx(dtx, data))
-                    continue;
-
-                deposit.dtx = dtx;
-            }
-            else
             if (v.first == "keyID") {
                 // Read keyID
                 std::string data = v.second.data();
@@ -97,41 +92,73 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
 
                 deposit.keyID.SetHex(data);
             }
+            else
+            if (v.first == "amountUserPayout") {
+                // Read user input amount
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                if (!ParseMoney(data, deposit.amtUserPayout))
+                    continue;
+            }
+            else
+            if (v.first == "txHex") {
+                // Read deposit transaction hex
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+                CMutableTransaction dtx;
+                if (!DecodeHexTx(deposit.dtx, data))
+                    continue;
+            }
+            else
+            if (v.first == "proofHex") {
+                // Read serialized merkleblock txout proof
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                CDataStream ssMB(ParseHex(data), SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS);
+                ssMB >> deposit.mbProof;
+            }
         }
 
-        // Verify that the deposit script represented exits in the tx
+        // Verify that the deposit represented exits as an output
         bool depositValid = false;
-        for (size_t i = 0; i < deposit.dtx.vout.size(); i++) {
-            CScript scriptPubKey = deposit.dtx.vout[i].scriptPubKey;
-            if (scriptPubKey.size() > 2 && scriptPubKey.IsWorkScoreScript()) {
+        for (const CTxOut& out : deposit.dtx.vout) {
+            CScript scriptPubKey = out.scriptPubKey;
+            if (scriptPubKey.size() > 3) {
                 // Check sidechain number
-                uint8_t nSidechain = (unsigned int)*scriptPubKey.begin();
+                uint8_t nSidechain = (unsigned int)scriptPubKey[1];
                 if (nSidechain != THIS_SIDECHAIN.nSidechain)
                     continue;
                 if (nSidechain != deposit.nSidechain)
                     continue;
-
-                CScript::const_iterator pkey = scriptPubKey.begin() + 1;
-                std::vector<unsigned char> vch;
-                opcodetype opcode;
-                if (!scriptPubKey.GetOp2(pkey, opcode, &vch))
-                    continue;
-                if (vch.size() != sizeof(uint160))
-                    continue;
-
-                CKeyID keyID = CKeyID(uint160(vch));
-                if (keyID.IsNull())
-                    continue;
-                if (keyID != deposit.keyID)
-                    continue;
-
-                depositValid = true;
             }
+
+            CScript::const_iterator pkey = scriptPubKey.begin() + 2;
+            std::vector<unsigned char> vch;
+            opcodetype opcode;
+            if (!scriptPubKey.GetOp2(pkey, opcode, &vch))
+                continue;
+            if (vch.size() != sizeof(uint160))
+                continue;
+
+            CKeyID keyID = CKeyID(uint160(vch));
+            if (keyID.IsNull())
+                continue;
+            if (keyID != deposit.keyID)
+                continue;
+
+            depositValid = true;
         }
+        // TODO check proof if not created by me
         // Add this deposit to the list
         if (depositValid)
             incoming.push_back(deposit);
     }
+    LogPrintf("Sidechain client received %d deposits\n", incoming.size());
 
     // return valid deposits in sidechain format
     return incoming;
@@ -139,6 +166,11 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
 
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
+    // Format user:pass for authentication
+    std::string auth = GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword", "");
+    if (auth == ":")
+        return false;
+
     try {
         // Setup BOOST ASIO for a synchronus call to mainchain
         boost::asio::io_service io_service;
@@ -165,17 +197,6 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
         os << "POST / HTTP/1.1\n";
         os << "Host: 127.0.0.1\n";
         os << "Content-Type: application/json\n";
-
-        // Format user:pass for authentication
-        std::string user = "";
-        GetArg("-rpcuser", user);
-        std::string pass = "";
-        GetArg("-rpcpassword", pass);
-
-        std::string auth = user + ":" + pass;
-        if (auth == ":")
-            return false;
-
         os << "Authorization: Basic " << EncodeBase64(auth) << std::endl;
         os << "Connection: close\n";
         os << "Content-Length: " << json.size() << "\n\n";
