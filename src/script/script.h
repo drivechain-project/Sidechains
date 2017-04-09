@@ -177,6 +177,7 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
+    OP_SIDECHAIN = 0xc1,
 
     // template matching params
     OP_SMALLINTEGER = 0xfa,
@@ -626,6 +627,12 @@ public:
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;
     bool IsPushOnly() const;
+
+    /** Return whether script is deposit (NOP_4 is OP_CHECKWORKSCORE on mainchain) */
+    bool IsWorkScoreScript() const
+    {
+        return (size() > 0 && back() == OP_NOP4);
+    }
 
     /**
      * Returns whether the script is guaranteed to fail at execution,

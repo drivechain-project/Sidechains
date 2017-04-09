@@ -89,6 +89,19 @@ CAmount CTransaction::GetValueOut() const
     return nValueOut;
 }
 
+CAmount CMutableTransaction::GetValueBurnedForWT() const
+{
+    CAmount nValueOut = CAmount(0);
+    for (const CTxOut out : vout) {
+        if (out.scriptPubKey.IsUnspendable()) {
+            nValueOut += out.nValue;
+            if (!MoneyRange(out.nValue) || !MoneyRange(nValueOut))
+                throw std::runtime_error(std::string(__func__) + ": value out of range");
+        }
+    }
+    return nValueOut;
+}
+
 double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSize) const
 {
     nTxSize = CalculateModifiedSize(nTxSize);

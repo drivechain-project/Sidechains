@@ -14,6 +14,7 @@
 #include "chain.h"
 #include "coins.h"
 #include "protocol.h" // For CMessageHeader::MessageStartChars
+#include "primitives/sidechain.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
@@ -33,6 +34,7 @@
 #include <boost/filesystem/path.hpp>
 
 class CBlockIndex;
+class CSidechainTreeDB;
 class CBlockTreeDB;
 class CBloomFilter;
 class CChainParams;
@@ -212,6 +214,10 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 // Setting the target to > than 550MB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 
+/** Sidechain keys */
+static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
+static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
+
 /** 
  * Process an incoming block. This only returns after the best known valid
  * block is made active. Note that it does not, however, guarantee that the
@@ -277,7 +283,6 @@ std::string GetWarnings(const std::string& strFor);
 bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
 
 /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */
 double GuessVerificationProgress(const ChainTxData& data, CBlockIndex* pindex);
@@ -535,6 +540,9 @@ extern CCoinsViewCache *pcoinsTip;
 
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern CBlockTreeDB *pblocktree;
+
+/** Global variable that points to the active sidechain tree (protected by cs_main) */
+extern CSidechainTreeDB *psidechaintree;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().

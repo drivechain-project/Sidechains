@@ -11,6 +11,7 @@
 
 class BitcoinGUI;
 class ClientModel;
+class SidechainPage;
 class OverviewPage;
 class PlatformStyle;
 class ReceiveCoinsDialog;
@@ -58,6 +59,7 @@ private:
     ClientModel *clientModel;
     WalletModel *walletModel;
 
+    SidechainPage *sidechainPage;
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
     ReceiveCoinsDialog *receiveCoinsPage;
@@ -71,6 +73,8 @@ private:
     const PlatformStyle *platformStyle;
 
 public Q_SLOTS:
+    /** Switch to sidechain page */
+    void gotoSidechainPage();
     /** Switch to overview (home) page */
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
