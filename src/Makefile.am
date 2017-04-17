@@ -81,6 +81,7 @@ BITCOIN_CORE_H = \
   base58.h \
   bloom.h \
   blockencodings.h \
+  bmm.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -118,7 +119,6 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
-  pow.h \
   protocol.h \
   random.h \
   reverselock.h \
@@ -180,6 +180,7 @@ libbitcoin_server_a_SOURCES = \
   addrdb.cpp \
   bloom.cpp \
   blockencodings.cpp \
+  bmm.cpp \
   chain.cpp \
   checkpoints.cpp \
   httprpc.cpp \
@@ -193,7 +194,6 @@ libbitcoin_server_a_SOURCES = \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
-  pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
   rpc/mining.cpp \

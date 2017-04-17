@@ -10,6 +10,8 @@
 #include "serialize.h"
 #include "uint256.h"
 
+#include <string>
+
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
@@ -25,8 +27,11 @@ public:
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
     uint32_t nTime;
-    uint32_t nBits;
     uint32_t nNonce;
+
+    // BMM header contents
+    std::string criticalProof;
+    CMutableTransaction txCritical;
 
     CBlockHeader()
     {
@@ -41,23 +46,31 @@ public:
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(nBits);
         READWRITE(nNonce);
+        READWRITE(criticalProof);
+        READWRITE(txCritical);
     }
 
     void SetNull()
     {
         nVersion = 0;
         hashPrevBlock.SetNull();
-        hashMerkleRoot.SetNull();
+        hashMerkleRoot.SetNull();        
         nTime = 0;
-        nBits = 0;
         nNonce = 0;
+        criticalProof = "";
+        txCritical = CMutableTransaction();
+    }
+
+    void SetBMMContentsNull()
+    {
+        criticalProof = "";
+        txCritical = CMutableTransaction();
     }
 
     bool IsNull() const
     {
-        return (nBits == 0);
+        return (criticalProof.empty());
     }
 
     uint256 GetHash() const;
@@ -107,12 +120,14 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.nVersion       = nVersion;
-        block.hashPrevBlock  = hashPrevBlock;
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
+        block.nVersion        = nVersion;
+        block.hashPrevBlock   = hashPrevBlock;
+        block.hashMerkleRoot  = hashMerkleRoot;
+        block.nTime           = nTime;
+        block.nNonce          = nNonce;
+        block.criticalProof   = criticalProof;
+        block.txCritical      = txCritical;
+
         return block;
     }
 

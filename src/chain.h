@@ -8,7 +8,6 @@
 
 #include "arith_uint256.h"
 #include "primitives/block.h"
-#include "pow.h"
 #include "tinyformat.h"
 #include "uint256.h"
 
@@ -177,9 +176,6 @@ public:
     //! Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
 
-    //! (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
-    arith_uint256 nChainWork;
-
     //! Number of transactions in this block.
     //! Note: in a potential headers-first mode, this number cannot be relied upon
     unsigned int nTx;
@@ -196,8 +192,9 @@ public:
     int nVersion;
     uint256 hashMerkleRoot;
     unsigned int nTime;
-    unsigned int nBits;
     unsigned int nNonce;
+    std::string criticalProof;
+    CMutableTransaction txCritical;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
@@ -214,18 +211,19 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        nChainWork = arith_uint256();
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
         nSequenceId = 0;
         nTimeMax = 0;
 
-        nVersion       = 0;
-        hashMerkleRoot = uint256();
-        nTime          = 0;
-        nBits          = 0;
-        nNonce         = 0;
+        nVersion            = 0;
+        hashMerkleRoot      = uint256();
+        nTime               = 0;
+        nNonce              = 0;
+
+        criticalProof   = "";
+        txCritical  = CMutableTransaction();
     }
 
     CBlockIndex()
@@ -237,11 +235,12 @@ public:
     {
         SetNull();
 
-        nVersion       = block.nVersion;
-        hashMerkleRoot = block.hashMerkleRoot;
-        nTime          = block.nTime;
-        nBits          = block.nBits;
-        nNonce         = block.nNonce;
+        nVersion            = block.nVersion;
+        hashMerkleRoot      = block.hashMerkleRoot;
+        nTime               = block.nTime;
+        nNonce              = block.nNonce;
+        criticalProof   = block.criticalProof;
+        txCritical  = block.txCritical;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -270,8 +269,9 @@ public:
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
-        block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.criticalProof  = criticalProof;
+        block.txCritical     = txCritical;
         return block;
     }
 
@@ -345,10 +345,6 @@ public:
     const CBlockIndex* GetAncestor(int height) const;
 };
 
-arith_uint256 GetBlockProof(const CBlockIndex& block);
-/** Return the time it would take to redo the work difference between from and to, assuming the current hashrate corresponds to the difficulty at tip, in seconds. */
-int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params&);
-
 /** Used to marshal pointers into hashes for db storage. */
 class CDiskBlockIndex : public CBlockIndex
 {
@@ -386,8 +382,9 @@ public:
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(nBits);
         READWRITE(nNonce);
+        READWRITE(criticalProof);
+        READWRITE(txCritical);
     }
 
     uint256 GetBlockHash() const
@@ -397,11 +394,11 @@ public:
         block.hashPrevBlock   = hashPrev;
         block.hashMerkleRoot  = hashMerkleRoot;
         block.nTime           = nTime;
-        block.nBits           = nBits;
         block.nNonce          = nNonce;
+        block.criticalProof   = criticalProof;
+        block.txCritical      = txCritical;
         return block.GetHash();
     }
-
 
     std::string ToString() const
     {

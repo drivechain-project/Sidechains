@@ -7,7 +7,6 @@
 
 #include "chainparams.h"
 #include "hash.h"
-#include "pow.h"
 #include "uint256.h"
 
 #include <stdint.h>
@@ -25,7 +24,7 @@ static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
 
-CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(GetDataDir() / "chainstate", nCacheSize, fMemory, fWipe, true) 
+CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(GetDataDir() / "chainstate", nCacheSize, fMemory, fWipe, true)
 {
 }
 
@@ -184,21 +183,19 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
             if (pcursor->GetValue(diskindex)) {
                 // Construct block index object
                 CBlockIndex* pindexNew = insertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = insertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
-
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, Params().GetConsensus()))
-                    return error("LoadBlockIndex(): CheckProofOfWork failed: %s", pindexNew->ToString());
+                pindexNew->pprev           = insertBlockIndex(diskindex.hashPrev);
+                pindexNew->nHeight         = diskindex.nHeight;
+                pindexNew->nFile           = diskindex.nFile;
+                pindexNew->nDataPos        = diskindex.nDataPos;
+                pindexNew->nUndoPos        = diskindex.nUndoPos;
+                pindexNew->nVersion        = diskindex.nVersion;
+                pindexNew->hashMerkleRoot  = diskindex.hashMerkleRoot;
+                pindexNew->nTime           = diskindex.nTime;
+                pindexNew->nNonce          = diskindex.nNonce;
+                pindexNew->criticalProof   = diskindex.criticalProof;
+                pindexNew->txCritical      = diskindex.txCritical;
+                pindexNew->nStatus         = diskindex.nStatus;
+                pindexNew->nTx             = diskindex.nTx;
 
                 pcursor->Next();
             } else {
