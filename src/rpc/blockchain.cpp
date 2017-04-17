@@ -43,37 +43,6 @@ static CUpdatedBlock latestblock;
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
 
-double GetDifficulty(const CBlockIndex* blockindex)
-{
-    // Floating point number that is a multiple of the minimum difficulty,
-    // minimum difficulty = 1.0.
-    if (blockindex == NULL)
-    {
-        if (chainActive.Tip() == NULL)
-            return 1.0;
-        else
-            blockindex = chainActive.Tip();
-    }
-
-    int nShift = (blockindex->nBits >> 24) & 0xff;
-
-    double dDiff =
-        (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
-
-    while (nShift < 29)
-    {
-        dDiff *= 256.0;
-        nShift++;
-    }
-    while (nShift > 29)
-    {
-        dDiff /= 256.0;
-        nShift--;
-    }
-
-    return dDiff;
-}
-
 UniValue blockheaderToJSON(const CBlockIndex* blockindex)
 {
     UniValue result(UniValue::VOBJ);
@@ -90,9 +59,6 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("time", (int64_t)blockindex->nTime));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)blockindex->nNonce));
-    result.push_back(Pair("bits", strprintf("%08x", blockindex->nBits)));
-    result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
-    result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
@@ -134,9 +100,6 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("time", block.GetBlockTime()));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
-    result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
-    result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
-    result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
@@ -314,19 +277,7 @@ UniValue waitforblockheight(const JSONRPCRequest& request)
 
 UniValue getdifficulty(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() != 0)
-        throw runtime_error(
-            "getdifficulty\n"
-            "\nReturns the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
-            "\nResult:\n"
-            "n.nnn       (numeric) the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getdifficulty", "")
-            + HelpExampleRpc("getdifficulty", "")
-        );
-
-    LOCK(cs_main);
-    return GetDifficulty();
+    return NullUniValue;
 }
 
 std::string EntryDescriptionString()
@@ -746,7 +697,7 @@ UniValue getblock(const JSONRPCRequest& request)
     if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not available (pruned data)");
 
-    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    if(!ReadBlockFromDisk(block, pblockindex))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
     if (!fVerbose)
@@ -1118,10 +1069,8 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     obj.push_back(Pair("blocks",                (int)chainActive.Height()));
     obj.push_back(Pair("headers",               pindexBestHeader ? pindexBestHeader->nHeight : -1));
     obj.push_back(Pair("bestblockhash",         chainActive.Tip()->GetBlockHash().GetHex()));
-    obj.push_back(Pair("difficulty",            (double)GetDifficulty()));
     obj.push_back(Pair("mediantime",            (int64_t)chainActive.Tip()->GetMedianTimePast()));
     obj.push_back(Pair("verificationprogress",  GuessVerificationProgress(Params().TxData(), chainActive.Tip())));
-    obj.push_back(Pair("chainwork",             chainActive.Tip()->nChainWork.GetHex()));
     obj.push_back(Pair("pruned",                fPruneMode));
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -1300,119 +1249,6 @@ UniValue getmempoolinfo(const JSONRPCRequest& request)
     return mempoolInfoToJSON();
 }
 
-UniValue preciousblock(const JSONRPCRequest& request)
-{
-    if (request.fHelp || request.params.size() != 1)
-        throw runtime_error(
-            "preciousblock \"blockhash\"\n"
-            "\nTreats a block as if it were received before others with the same work.\n"
-            "\nA later preciousblock call can override the effect of an earlier one.\n"
-            "\nThe effects of preciousblock are not retained across restarts.\n"
-            "\nArguments:\n"
-            "1. \"blockhash\"   (string, required) the hash of the block to mark as precious\n"
-            "\nResult:\n"
-            "\nExamples:\n"
-            + HelpExampleCli("preciousblock", "\"blockhash\"")
-            + HelpExampleRpc("preciousblock", "\"blockhash\"")
-        );
-
-    std::string strHash = request.params[0].get_str();
-    uint256 hash(uint256S(strHash));
-    CBlockIndex* pblockindex;
-
-    {
-        LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-        pblockindex = mapBlockIndex[hash];
-    }
-
-    CValidationState state;
-    PreciousBlock(state, Params(), pblockindex);
-
-    if (!state.IsValid()) {
-        throw JSONRPCError(RPC_DATABASE_ERROR, state.GetRejectReason());
-    }
-
-    return NullUniValue;
-}
-
-UniValue invalidateblock(const JSONRPCRequest& request)
-{
-    if (request.fHelp || request.params.size() != 1)
-        throw runtime_error(
-            "invalidateblock \"blockhash\"\n"
-            "\nPermanently marks a block as invalid, as if it violated a consensus rule.\n"
-            "\nArguments:\n"
-            "1. \"blockhash\"   (string, required) the hash of the block to mark as invalid\n"
-            "\nResult:\n"
-            "\nExamples:\n"
-            + HelpExampleCli("invalidateblock", "\"blockhash\"")
-            + HelpExampleRpc("invalidateblock", "\"blockhash\"")
-        );
-
-    std::string strHash = request.params[0].get_str();
-    uint256 hash(uint256S(strHash));
-    CValidationState state;
-
-    {
-        LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
-        InvalidateBlock(state, Params(), pblockindex);
-    }
-
-    if (state.IsValid()) {
-        ActivateBestChain(state, Params());
-    }
-
-    if (!state.IsValid()) {
-        throw JSONRPCError(RPC_DATABASE_ERROR, state.GetRejectReason());
-    }
-
-    return NullUniValue;
-}
-
-UniValue reconsiderblock(const JSONRPCRequest& request)
-{
-    if (request.fHelp || request.params.size() != 1)
-        throw runtime_error(
-            "reconsiderblock \"blockhash\"\n"
-            "\nRemoves invalidity status of a block and its descendants, reconsider them for activation.\n"
-            "This can be used to undo the effects of invalidateblock.\n"
-            "\nArguments:\n"
-            "1. \"blockhash\"   (string, required) the hash of the block to reconsider\n"
-            "\nResult:\n"
-            "\nExamples:\n"
-            + HelpExampleCli("reconsiderblock", "\"blockhash\"")
-            + HelpExampleRpc("reconsiderblock", "\"blockhash\"")
-        );
-
-    std::string strHash = request.params[0].get_str();
-    uint256 hash(uint256S(strHash));
-
-    {
-        LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
-        ResetBlockFailureFlags(pblockindex);
-    }
-
-    CValidationState state;
-    ActivateBestChain(state, Params());
-
-    if (!state.IsValid()) {
-        throw JSONRPCError(RPC_DATABASE_ERROR, state.GetRejectReason());
-    }
-
-    return NullUniValue;
-}
-
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafe argNames
   //  --------------------- ------------------------  -----------------------  ------ ----------
@@ -1434,11 +1270,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "pruneblockchain",        &pruneblockchain,        true,  {"height"} },
     { "blockchain",         "verifychain",            &verifychain,            true,  {"checklevel","nblocks"} },
 
-    { "blockchain",         "preciousblock",          &preciousblock,          true,  {"blockhash"} },
-
     /* Not shown in help */
-    { "hidden",             "invalidateblock",        &invalidateblock,        true,  {"blockhash"} },
-    { "hidden",             "reconsiderblock",        &reconsiderblock,        true,  {"blockhash"} },
     { "hidden",             "waitfornewblock",        &waitfornewblock,        true,  {"timeout"} },
     { "hidden",             "waitforblock",           &waitforblock,           true,  {"blockhash","timeout"} },
     { "hidden",             "waitforblockheight",     &waitforblockheight,     true,  {"height","timeout"} },
