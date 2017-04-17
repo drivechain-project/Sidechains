@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string>
 
+// TODO no boost
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
@@ -153,7 +154,6 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
 
             depositValid = true;
         }
-        // TODO check proof if not created by me
         // Add this deposit to the list
         if (depositValid)
             incoming.push_back(deposit);
@@ -164,6 +164,29 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
     return incoming;
 }
 
+bool SidechainClient::VerifyCriticalHashProof(const std::string& criticalProof, uint256 &txid)
+{
+    // JSON for verifying critical hash
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"verifytxoutproof\", \"params\": ");
+    json.append("[\"");
+    json.append(criticalProof);
+    json.append("\"] }");
+
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree))
+        return false;
+
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        std::string data = value.second.data();
+        if (data.size() != 64)
+            continue;
+        txid = uint256S(data);
+    }
+    return true;
+}
+
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
     // Format user:pass for authentication
@@ -172,7 +195,7 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
         return false;
 
     try {
-        // Setup BOOST ASIO for a synchronus call to mainchain
+        // Setup BOOST ASIO for a synchronus call to the mainchain
         boost::asio::io_service io_service;
         tcp::resolver resolver(io_service);
         tcp::resolver::query query("127.0.0.1", "18332");
@@ -240,7 +263,6 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
             ss.ignore(std::numeric_limits<std::streamsize>::max(), '\r');
 
         // Parse json response;
-        // TODO consider using univalue read_json instead of boost
         std::string JSON;
         ss >> JSON;
         std::stringstream jss;
