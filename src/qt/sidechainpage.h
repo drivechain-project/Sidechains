@@ -52,6 +52,10 @@ private Q_SLOTS:
 
     void on_deleteButton_clicked();
 
+    void on_pushButtonCreateBlock_clicked();
+
+    void on_pushButtonSubmitBlock_clicked();
+
 private:
     Ui::SidechainPage *ui;
 

@@ -7,12 +7,14 @@
 
 #include "base58.h"
 #include "bitcoinunits.h"
+#include "bmm.h"
 #include "coins.h"
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "guiconstants.h"
 #include "guiutil.h"
 #include "init.h"
+#include "miner.h"
 #include "net.h"
 #include "optionsmodel.h"
 #include "primitives/sidechain.h"
@@ -25,6 +27,8 @@
 #include <QClipboard>
 #include <QMessageBox>
 #include <QStackedWidget>
+
+#include <sstream>
 
 #if defined(HAVE_CONFIG_H)
 #include "config/bitcoin-config.h" /* for USE_QRCODE */
@@ -322,5 +326,85 @@ void SidechainPage::generateAddress()
         generateQR(QString::fromStdString(address.ToString()));
 
         ui->lineEditDepositAddress->setText(QString::fromStdString(address.ToString()));
+    }
+}
+
+void SidechainPage::on_pushButtonCreateBlock_clicked()
+{
+    // create block
+    boost::shared_ptr<CReserveScript> coinbaseScript;
+    GetMainSignals().ScriptForMining(coinbaseScript);
+
+    // If the keypool is exhausted, no script is returned at all.  Catch this.
+    if (!coinbaseScript) {
+        // TODO display error message
+        return;
+    }
+
+    if (coinbaseScript->reserveScript.empty()) {
+        // TODO display error message
+        // No coinbase script available (mining requires a wallet)
+        return;
+    }
+
+    coinbaseScript->KeepScript();
+
+    std::unique_ptr<CBlockTemplate> pblocktemplate(
+                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true));
+
+    if (!pblocktemplate.get()) {
+        // TODO display error message
+        return;
+    }
+
+    unsigned int nExtraNonce = 0;
+    CBlock *pblock = &pblocktemplate->block;
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+    }
+
+    ++pblock->nNonce;
+
+    if (!bmm.StoreBMMBlock(*pblock)) {
+        // TODO display error message
+        return;
+    }
+
+    std::stringstream ss;
+    ss << "Block hash (h*):\n" << pblock->GetHash().ToString() << std::endl;
+    ss << std::endl;
+    ss << "Block:\n" << pblock->ToString() << std::endl;
+
+    ui->textBrowser->setText(QString::fromStdString(ss.str()));
+}
+
+void SidechainPage::on_pushButtonSubmitBlock_clicked()
+{
+    uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
+    CBlock block;
+
+    if (!bmm.GetBMMBlock(hashBlock, block)) {
+        // TODO display error message
+        return;
+    }
+
+    // Get user input h* and coinbase hex
+    std::string strProof = ui->lineEditProof->text().toStdString();
+    CMutableTransaction mtx;
+    if (!DecodeHexTx(mtx, ui->lineEditCoinbaseHex->text().toStdString())) {
+        // TODO display error message
+        return;
+    }
+
+    CTransaction txCritical(mtx);
+    block.criticalProof = strProof;
+    block.txCritical = txCritical;
+
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+
+    if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
+        // TODO display error message
+        return;
     }
 }

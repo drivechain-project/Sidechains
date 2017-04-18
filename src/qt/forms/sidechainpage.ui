@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>815</width>
-    <height>630</height>
+    <width>800</width>
+    <height>650</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -551,7 +551,7 @@
           <item>
            <widget class="QRadioButton" name="radioButtonHighlightMine">
             <property name="text">
-             <string>Highlight Mine</string>
+             <string>High&amp;light Mine</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -561,7 +561,7 @@
           <item>
            <widget class="QRadioButton" name="radioButtonOnlyMine">
             <property name="text">
-             <string>Only Mine</string>
+             <string>Only &amp;Mine</string>
             </property>
            </widget>
           </item>
@@ -583,11 +583,103 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabBMM">
+      <attribute name="icon">
+       <iconset resource="../bitcoin.qrc">
+        <normaloff>:/icons/tx_mined</normaloff>:/icons/tx_mined</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>BMM</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QFrame" name="frame_13">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Create BMM Block</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButtonCreateBlock">
+            <property name="text">
+             <string>Generate block</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QTextBrowser" name="textBrowser"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_14">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Connect BMM Block</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLineEdit" name="lineEditProof">
+            <property name="placeholderText">
+             <string>Proof</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLineEdit" name="lineEditCoinbaseHex">
+            <property name="placeholderText">
+             <string>Coinbase</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLineEdit" name="lineEditBMMHash">
+            <property name="placeholderText">
+             <string>Block Hash</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QPushButton" name="pushButtonSubmitBlock">
+            <property name="text">
+             <string>Connect Block</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QValidatedLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qvalidatedlineedit.h</header>
+  </customwidget>
   <customwidget>
    <class>BitcoinAmountField</class>
    <extends>QLineEdit</extends>
@@ -598,11 +690,6 @@
    <class>QRImageWidget</class>
    <extends>QLabel</extends>
    <header>receiverequestdialog.h</header>
-  </customwidget>
-  <customwidget>
-   <class>QValidatedLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>qvalidatedlineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources>
