@@ -2566,13 +2566,13 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 
 bool VerifyCriticalHashProof(const CBlock& block)
 {
-    const CTransaction& txCritical(block.txCritical);
-    if (!txCritical.IsCoinBase() || txCritical.vout.empty())
-        return false;
-
     const CChainParams& chainParams = Params();
     if (block.GetHash() == chainParams.GetConsensus().hashGenesisBlock)
         return true;
+
+    const CTransaction& txCritical(block.txCritical);
+    if (!txCritical.IsCoinBase() || txCritical.vout.empty())
+        return false;
 
     if (block.criticalProof.empty())
         return false;

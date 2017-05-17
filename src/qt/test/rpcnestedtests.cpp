@@ -53,7 +53,7 @@ void RPCNestedTests::rpcNestedTests()
     InitBlockIndex(chainparams);
     {
         CValidationState state;
-        bool ok = ActivateBestChain(state, chainparams);
+        bool ok = ActivateBestBMMChain(state, chainparams);
         QVERIFY(ok);
     }
 

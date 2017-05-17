@@ -72,7 +72,7 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         InitBlockIndex(chainparams);
         {
             CValidationState state;
-            bool ok = ActivateBestChain(state, chainparams);
+            bool ok = ActivateBestBMMChain(state, chainparams);
             BOOST_CHECK(ok);
         }
         nScriptCheckThreads = 3;
@@ -126,8 +126,6 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
     IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);
-
-    while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     ProcessNewBlock(chainparams, shared_pblock, true, NULL);
