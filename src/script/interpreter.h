@@ -109,7 +109,7 @@ enum
 
     // Support OP_BRIBE for BMM
     //
-    SCRIPT_VERIFY_BRIBE = (1U << 16),
+    SCRIPT_VERIFY_BRIBEVERIFY = (1U << 16),
 };
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);

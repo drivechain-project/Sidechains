@@ -131,7 +131,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
-    case OP_BRIBE                  : return "OP_BRIBE";
+    case OP_BRIBEVERIFY            : return "OP_BRIBEVERIFY";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
@@ -268,9 +268,9 @@ bool CScript::IsBribe() const
     // TODO
     // The format of a bribe script is currently being discussed on the
     // bitcoin-dev mailing list. For now we are just checking if the script
-    // is large enough to contain an h* and contains an OP_BRIBE op.
+    // is large enough to contain an h* and contains an OP_BRIBEVERIFY op.
 
-    return (this->Find(OP_BRIBE));
+    return (this->Find(OP_BRIBEVERIFY));
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const

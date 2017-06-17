@@ -1665,7 +1665,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     // TODO
     // Activate BRIBE right now for testing
     if (true) {
-        flags |= SCRIPT_VERIFY_BRIBE;
+        flags |= SCRIPT_VERIFY_BRIBEVERIFY;
     }
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;

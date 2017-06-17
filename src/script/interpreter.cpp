@@ -424,9 +424,9 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     break;
                 }
 
-                case OP_BRIBE:
+                case OP_BRIBEVERIFY:
                 {
-                    if (!(flags & SCRIPT_VERIFY_BRIBE)) {
+                    if (!(flags & SCRIPT_VERIFY_BRIBEVERIFY)) {
                         // not enabled; treat as a NOP4
                         if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS) {
                             return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS);
@@ -439,13 +439,9 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 
                     // Check h*
                     bool fHashCritical = checker.CheckCriticalHash(stacktop(-1));
-
-                    // Pop h* from the stack
-                    popstack(stack);
-
-                    // Push result to the stack
-                    stack.push_back(fHashCritical ? vchTrue : vchFalse);
-
+		    if (!fHashCritical) {
+		   	return set_error(serror, SCRIPT_ERR_UNSATISFIED_BRIBE); 
+		    }
                     break;
                 }
 
