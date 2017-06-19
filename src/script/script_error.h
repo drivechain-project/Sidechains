@@ -66,7 +66,8 @@ typedef enum ScriptError_t
     
     /* Sidechain*/
     SCRIPT_ERR_UNSATISFIED_BRIBE,
-    
+    SCRIPT_ERR_UNKNOWN_SIDECHAIN,
+
     SCRIPT_ERR_ERROR_COUNT
 } ScriptError;
 

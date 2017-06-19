@@ -131,7 +131,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
-    case OP_BRIBEVERIFY            : return "OP_BRIBEVERIFY";
+    case OP_NOP4		   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
@@ -251,6 +251,19 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
+bool CScript::IsBribeCommitment() const {
+    //this format is still up in the air, for now I am using
+    // <version> <32 byte commitment hash> 
+    // use the same versioning as witness programs for now
+    if (this->size() != 33) {
+        return false; 
+    }
+    if ((*this)[0] != OP_0 && ((*this)[0] < OP_1 || (*this)[0] > OP_16)) {
+        return false;
+    }
+    return true;
+}
+
 bool CScript::IsBribe() const
 {
     // TODO
@@ -262,7 +275,7 @@ bool CScript::IsBribe() const
     // opcode count
     //
     size_t size = this->size();
-    if (size < 32 )
+    if (size < 32)
         return false;
 
     // TODO
@@ -270,7 +283,7 @@ bool CScript::IsBribe() const
     // bitcoin-dev mailing list. For now we are just checking if the script
     // is large enough to contain an h* and contains an OP_BRIBEVERIFY op.
 
-    return (this->Find(OP_BRIBEVERIFY));
+    return (this->Find(OP_NOP4));
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const

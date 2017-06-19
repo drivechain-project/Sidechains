@@ -5,6 +5,7 @@
 
 #include "interpreter.h"
 
+#include "validation.h"
 #include "primitives/transaction.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
@@ -424,9 +425,10 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     break;
                 }
 
-                case OP_BRIBEVERIFY:
+                case OP_NOP4:
                 {
-                    if (!(flags & SCRIPT_VERIFY_BRIBEVERIFY)) {
+                    //format: critical_hash sidechain_id OP_BRIBEVERIFY 
+		    if (!(flags & SCRIPT_VERIFY_BRIBEVERIFY)) {
                         // not enabled; treat as a NOP4
                         if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS) {
                             return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS);
@@ -434,11 +436,17 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         break;
                     }
 
-                    if (stack.size() < 1)
+                    if (stack.size() < 2)
                         return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
-
-                    // Check h*
-                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-1));
+		    
+		    const CScriptNum scriptNumSidechainId(stacktop(-1),fRequireMinimal);
+		    uint8_t nSidechainId;  
+		    if (!checker.CheckSidechainId(scriptNumSidechainId,nSidechainId)) {
+		   	return set_error(serror, SCRIPT_ERR_UNKNOWN_SIDECHAIN); 
+		    }
+                    
+		    // Check h*
+                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-1),nSidechainId);
 		    if (!fHashCritical) {
 		   	return set_error(serror, SCRIPT_ERR_UNSATISFIED_BRIBE); 
 		    }
@@ -1185,6 +1193,7 @@ uint256 GetOutputsHash(const CTransaction& txTo) {
     return ss.GetHash();
 }
 
+
 } // anon namespace
 
 PrecomputedTransactionData::PrecomputedTransactionData(const CTransaction& txTo)
@@ -1369,6 +1378,29 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
     if (nSequenceMasked > txToSequenceMasked)
         return false;
 
+    return true;
+}
+bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, uint8_t& nSidechainId) const
+{
+    //TODO: Implement this, we need to look at the block this transaction is in 
+    //to see if the coinbase transaction outputs cointains the given vchHash 
+    //the given vchHash can ONLY onccur in the slot dedicated to nSidechainId
+    CTransactionRef coinbaseTx = chainActive.Tip()->coinbase;
+    CTxOut sidechainTxOut = (*coinbaseTx).vout[nSidechainId];
+    CScript commitment = sidechainTxOut.scriptPubKey; 
+    if (!commitment.IsBribeCommitment()) { 
+        return false;
+    }
+    std::vector<unsigned char> headerCommitment(commitment.begin() + 1, commitment.end()); 
+    return headerCommitment == vchHash;
+}
+bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
+{ 
+    if (id > CScriptNum(255) || id < CScriptNum(0)) {
+        return false;
+    }
+    //TODO: Look at this closer, is this safe??
+    nSidechainId = static_cast<uint8_t>(id.getint() & 0xff);
     return true;
 }
 

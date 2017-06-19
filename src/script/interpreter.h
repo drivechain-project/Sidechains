@@ -7,8 +7,8 @@
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
 #include "script_error.h"
+#include "validation.h"
 #include "primitives/transaction.h"
-
 #include <vector>
 #include <stdint.h>
 #include <string>
@@ -147,11 +147,15 @@ public:
          return false;
     }
 
-    virtual bool CheckCriticalHash(const std::vector<unsigned char>& vchHash) const
+    virtual bool CheckCriticalHash(const std::vector<unsigned char>& vchHash, uint8_t& nSidechainId) const
     {
          return false;
     }
 
+    virtual bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
+    { 
+         return false; 
+    }
     virtual ~BaseSignatureChecker() {}
 };
 
@@ -172,6 +176,8 @@ public:
     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const;
     bool CheckLockTime(const CScriptNum& nLockTime) const;
     bool CheckSequence(const CScriptNum& nSequence) const;
+    bool CheckCriticalHash(const std::vector<unsigned char>& vchHash, uint8_t& nSidechainId) const;
+    bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const;
 };
 
 class MutableTransactionSignatureChecker : public TransactionSignatureChecker
