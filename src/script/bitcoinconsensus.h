@@ -66,11 +66,15 @@ enum
 /// If not NULL, err will contain an error/success code for the operation
 EXPORT_SYMBOL int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
                                                  const unsigned char *txTo        , unsigned int txToLen,
-                                                 unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err);
+                                                 unsigned int nIn, 
+                                                 const unsigned char *coinbaseTxIn        , unsigned int coinbaseTxInLen,
+						 unsigned int flags, bitcoinconsensus_error* err);
 
 EXPORT_SYMBOL int bitcoinconsensus_verify_script_with_amount(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, int64_t amount,
                                     const unsigned char *txTo        , unsigned int txToLen,
-                                    unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err);
+                                    unsigned int nIn, 
+                                    const unsigned char *coinbaseTxIn        , unsigned int coinbaseTxInLen,
+				    unsigned int flags, bitcoinconsensus_error* err);
 
 EXPORT_SYMBOL unsigned int bitcoinconsensus_version();
 

@@ -1385,9 +1385,9 @@ bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned c
     //TODO: Implement this, we need to look at the block this transaction is in 
     //to see if the coinbase transaction outputs cointains the given vchHash 
     //the given vchHash can ONLY onccur in the slot dedicated to nSidechainId
-    CTransactionRef coinbaseTx = chainActive.Tip()->coinbase;
-    CTxOut sidechainTxOut = (*coinbaseTx).vout[nSidechainId];
-    CScript commitment = sidechainTxOut.scriptPubKey; 
+    //const CTransactionRef coinbaseTx = chain.Tip()->coinbase;
+    const CTxOut sidechainTxOut = (*coinbaseTx).vout[nSidechainId];
+    const CScript commitment = sidechainTxOut.scriptPubKey; 
     if (!commitment.IsBribeCommitment()) { 
         return false;
     }

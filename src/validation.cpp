@@ -1199,8 +1199,8 @@ bool CScriptCheck::operator()() {
     std::multimap<uint256, int> mapBMMLDCopy;
     if (scriptPubKey.IsBribe())
         mapBMMLDCopy = scdb.GetLinkingData();
-
-    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata, mapBMMLDCopy), &error);
+    const CTransactionRef& coinbaseTx = chainActive.Tip()->coinbase;
+    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, coinbaseTx, cacheStore, *txdata, mapBMMLDCopy), &error);
 }
 
 int GetSpendHeight(const CCoinsViewCache& inputs)

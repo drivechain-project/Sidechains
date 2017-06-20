@@ -871,7 +871,7 @@ UniValue createbribe(const JSONRPCRequest& request)
 
     // Create bribe script
     CScript scriptPubKey;
-    scriptPubKey << CScriptNum::serialize(nHeight) << ToByteVector(hashCritical) << OP_BRIBEVERIFY
+    scriptPubKey << CScriptNum::serialize(nHeight) << ToByteVector(hashCritical) << OP_NOP4
                  << OP_NOTIF
                  << CScriptNum::serialize(300) << OP_CHECKLOCKTIMEVERIFY << OP_DROP
                  << OP_DUP << OP_HASH160 << ToByteVector(keyID) << OP_EQUALVERIFY << OP_CHECKSIG

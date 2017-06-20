@@ -8,7 +8,7 @@
 
 #include "script/interpreter.h"
 #include "sidechaindb.h"
-
+#include "validation.h"
 #include <vector>
 
 // DoS prevention: limit cache size to 32MB (over 1000000 entries on 64-bit
@@ -48,7 +48,7 @@ private:
     std::multimap<uint256, int> mapLD;
 
 public:
-    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, bool storeIn, PrecomputedTransactionData& txdataIn, const std::multimap<uint256, int>& mapBMMLDCopy) : TransactionSignatureChecker(txToIn, nInIn, amountIn, txdataIn), store(storeIn)
+    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CTransactionRef& coinbaseTx, bool storeIn, PrecomputedTransactionData& txdataIn, const std::multimap<uint256, int>& mapBMMLDCopy) : TransactionSignatureChecker(txToIn, nInIn, amountIn, coinbaseTx, txdataIn), store(storeIn)
     {
         mapLD = mapBMMLDCopy;
     }
