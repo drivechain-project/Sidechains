@@ -44,9 +44,6 @@ public:
     /** Return vector of deposits this tau for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
 
-    /** Return B-WT^ for sidechain if one has been verified */
-    CTransaction GetWTJoinTx(uint8_t nSidechain, int nHeight) const;
-
     /** Create a script with OP_RETURN data representing the DB state */
     CScript CreateStateScript(int nHeight) const;
 
@@ -78,6 +75,12 @@ public:
     /** Print SCDB WT^ verification status */
     std::string ToString() const;
 
+    /** Is there anything being tracked by the SCDB? */
+    bool HasState() const;
+
+    /** Return the cached WT^ transaction */
+    std::vector<CTransaction> GetWTJoinCache() const;
+
 private:
     /** Sidechain "database" tracks verification status of WT^(s) */
     std::vector<SCDBIndex> SCDB;
@@ -94,9 +97,6 @@ private:
 
     /** The most recent block that SCDB has processed */
     uint256 hashBlockLastSeen;
-
-    /** Is there anything being tracked by the SCDB? */
-    bool HasState() const;
 
     /** Apply update to SCDB */
     bool ApplyStateScript(const CScript& state, bool fJustCheck = false);
