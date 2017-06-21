@@ -7,6 +7,7 @@
 #include "base58.h"
 #include "chain.h"
 #include "core_io.h"
+#include "primitives/transaction.h"
 #include "script/script.h"
 #include "sidechain.h"
 #include "uint256.h"
@@ -287,60 +288,6 @@ uint256 SidechainDB::GetSCDBHash() const
     return ss.GetHash();
 }
 
-bool SidechainDB::ReadStateScript(const CTransactionRef& coinbase)
-{
-    /*
-     * Only one state script of the current version is valid.
-     * State scripts with invalid version numbers will be ignored.
-     * If there are multiple state scripts with valid version numbers
-     * the entire coinbase will be ignored by SCDB and a default
-     * ignore vote will be cast. If there isn't a state update in
-     * the transaction outputs, a default ignore vote will be cast.
-     */
-    if (!coinbase || coinbase->IsNull())
-        return false;
-
-    if (!HasState())
-        return false;
-
-    // Collect potentially valid state scripts
-    std::vector<CScript> vStateScript;
-    for (size_t i = 0; i < coinbase->vout.size(); i++) {
-        const CScript& scriptPubKey = coinbase->vout[i].scriptPubKey;
-        if (scriptPubKey.size() < 3)
-            continue;
-        // State script begins with OP_RETURN
-        if (scriptPubKey[0] != OP_RETURN)
-            continue;
-        // Check state script version
-        if (scriptPubKey[1] != SCOP_VERSION || scriptPubKey[2] != SCOP_VERSION_DELIM)
-            continue;
-        vStateScript.push_back(scriptPubKey);
-    }
-
-    // First case: Invalid update. Ignore state script, cast all ignore votes
-    if (vStateScript.size() != 1)
-        return ApplyDefaultUpdate();
-
-    // Second case: potentially valid update script, attempt to update SCDB
-    // Collect and combine the status of all sidechain WT^(s)
-    std::vector<std::vector<SidechainWTJoinState>> vStateAll;
-    for (const Sidechain& s : ValidSidechains) {
-        const std::vector<SidechainWTJoinState> vState = GetState(s.nSidechain);
-        vStateAll.push_back(vState);
-    }
-
-    const CScript& state = vStateScript.front();
-    if (ApplyStateScript(state, vStateAll, true))
-        return ApplyStateScript(state, vStateAll);
-
-    // Invalid or no update script try to apply default
-    if (!ApplyDefaultUpdate())
-        LogPrintf("SidechainDB::ReadStateScript: Invalid update & failed to apply default update!\n");
-
-    return false;
-}
-
 bool SidechainDB::Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid, bool fJustCheck)
 {
     if (!SidechainNumberValid(nSidechain))
@@ -362,10 +309,8 @@ bool SidechainDB::Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, 
     return (index.InsertMember(member));
 }
 
-bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const CTransactionRef& coinbase)
+bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout)
 {
-    if (!coinbase || !coinbase->IsCoinBase())
-        return false;
     if (hashBlock.IsNull())
         return false;
 
@@ -374,12 +319,42 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const CTransacti
         if (nHeight > 0 && (nHeight % s.GetTau()) == 0)
             SCDB[s.nSidechain].ClearMembers();
 
-    // Apply state script
-    if (!ReadStateScript(coinbase))
-        LogPrintf("SidechainDB::Update: failed to read state script\n");
+    /*
+     * Only one state script of the current version is valid.
+     * State scripts with invalid version numbers will be ignored.
+     * If there are multiple state scripts with valid version numbers
+     * the entire coinbase will be ignored by SCDB and a default
+     * ignore vote will be cast. If there isn't a state update in
+     * the transaction outputs, a default ignore vote will be cast.
+     */
+
+    // Scan for state script
+    std::vector<CScript> vStateScript;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+
+        // Minimum size
+        if (scriptPubKey.size() < 3)
+            continue;
+        // State script begins with OP_RETURN
+        if (!scriptPubKey.IsUnspendable())
+            continue;
+        // Check state script version
+        if (scriptPubKey[1] != SCOP_VERSION || scriptPubKey[2] != SCOP_VERSION_DELIM)
+            continue;
+
+        vStateScript.push_back(scriptPubKey);
+    }
+
+    if (vStateScript.size() == 1 && ApplyStateScript(vStateScript[0], true)) {
+        ApplyStateScript(vStateScript[0]);
+    } else {
+        LogPrintf("SidechainDB::Update: failed to apply state script\n");
+        ApplyDefaultUpdate();
+    }
 
     // Scan for h*(s) in coinbase outputs
-    for (const CTxOut& out : coinbase->vout) {
+    for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
         // Must at least contain the h*
@@ -491,8 +466,15 @@ std::vector<SidechainWTJoinState> SidechainDB::GetState(uint8_t nSidechain) cons
     return vState;
 }
 
-bool SidechainDB::ApplyStateScript(const CScript& script, const std::vector<std::vector<SidechainWTJoinState>>& vState, bool fJustCheck)
+bool SidechainDB::ApplyStateScript(const CScript& script, bool fJustCheck)
 {
+    // Collect the current SCDB status
+    std::vector<std::vector<SidechainWTJoinState>> vState;
+    for (const Sidechain& s : ValidSidechains) {
+        const std::vector<SidechainWTJoinState> vSidechainState = GetState(s.nSidechain);
+        vState.push_back(vSidechainState);
+    }
+
     if (script.size() < 4)
         return false;
 

@@ -1579,7 +1579,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                 return InitError("Cannot initalize SCDB. Corrupt coinbase cache.\n");
 
             // Update SCDB
-            if (!scdb.Update(i, pindex->GetBlockHash(), pindex->coinbase))
+            if (!scdb.Update(i, pindex->GetBlockHash(), pindex->coinbase->vout))
                 return InitError("Failed to initialize SCDB. Invalid state update.\n");
         }
     }

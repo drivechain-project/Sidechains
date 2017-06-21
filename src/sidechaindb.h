@@ -5,13 +5,15 @@
 #ifndef BITCOIN_SIDECHAINDB_H
 #define BITCOIN_SIDECHAINDB_H
 
-#include "primitives/transaction.h"
-
 #include <map>
 #include <queue>
 #include <vector>
 
+#include "uint256.h"
+
 class CScript;
+class CTransaction;
+class CTxOut;
 class uint256;
 
 struct Sidechain;
@@ -59,7 +61,7 @@ public:
      * updates the SCDB state during normal operation. The update
      * overload exists to facilitate testing.
      */
-    bool Update(int nHeight, const uint256& hashBlock, const CTransactionRef& coinbase);
+    bool Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout);
 
     /** Update the DB state (public for unit tests) */
     bool Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid, bool fJustCheck = false);
@@ -96,11 +98,8 @@ private:
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
 
-    /** Try to read state from a coinbase and apply it if valid */
-    bool ReadStateScript(const CTransactionRef &coinbase);
-
-    /** Apply the results of ReadStateScript() to SCDB */
-    bool ApplyStateScript(const CScript& state, const std::vector<std::vector<SidechainWTJoinState>>& vState, bool fJustCheck = false);
+    /** Apply update to SCDB */
+    bool ApplyStateScript(const CScript& state, bool fJustCheck = false);
 
     /**
      * Submit default vote for all sidechain WT^(s).
