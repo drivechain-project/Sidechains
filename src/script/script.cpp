@@ -253,12 +253,15 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
 
 bool CScript::IsBribeCommitment() const {
     //this format is still up in the air, for now I am using
-    // <version> <32 byte commitment hash> 
+    // <version> <push op> <32 byte commitment hash> 
     // use the same versioning as witness programs for now
-    if (this->size() != 33) {
+    if (this->size() != 34) {
         return false; 
     }
     if ((*this)[0] != OP_0 && ((*this)[0] < OP_1 || (*this)[0] > OP_16)) {
+        return false;
+    }
+    if ((*this)[1] != 0x20) {
         return false;
     }
     return true;

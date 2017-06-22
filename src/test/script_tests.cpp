@@ -28,7 +28,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <univalue.h>
-
+#include <iostream>
 // Uncomment if you want to output updated JSON tests.
 // #define UPDATE_JSON_TESTS
 
@@ -98,6 +98,8 @@ static ScriptErrorDesc script_errors[]={
     {SCRIPT_ERR_WITNESS_MALLEATED_P2SH, "WITNESS_MALLEATED_P2SH"},
     {SCRIPT_ERR_WITNESS_UNEXPECTED, "WITNESS_UNEXPECTED"},
     {SCRIPT_ERR_WITNESS_PUBKEYTYPE, "WITNESS_PUBKEYTYPE"},
+    {SCRIPT_ERR_UNSATISFIED_BRIBE, "UNSATISFIED_BRIBE"},
+    {SCRIPT_ERR_UNKNOWN_SIDECHAIN, "UNKNOWN_SIDECHAIN"},
 };
 
 const char *FormatScriptError(ScriptError_t err)
@@ -117,9 +119,13 @@ ScriptError_t ParseScriptError(const std::string &name)
     BOOST_ERROR("Unknown scripterror \"" << name << "\" in test description");
     return SCRIPT_ERR_UNKNOWN_ERROR;
 }
+CScript ParseBribeCommitment(const std::string& hashStr)
+{
+    const CScript& script = ParseScript(hashStr);
 
+    return script;
+}
 BOOST_FIXTURE_TEST_SUITE(script_tests, BasicTestingSetup)
-
 CMutableTransaction BuildCreditingTransaction(const CScript& scriptPubKey, int nValue = 0)
 {
     CMutableTransaction txCredit;
@@ -153,8 +159,23 @@ CMutableTransaction BuildSpendingTransaction(const CScript& scriptSig, const CSc
 
     return txSpend;
 }
-
-void DoTest(const CScript& scriptPubKey, const CScript& scriptSig, const CScriptWitness& scriptWitness, int flags, const std::string& message, int scriptError, CAmount nValue = 0)
+CTransaction BuildCoinbaseTransaction(const std::vector<CScript>& bribeCommitments)
+{
+    CMutableTransaction coinbaseTx;
+    coinbaseTx.nVersion = 1;
+    coinbaseTx.nLockTime = 0;
+    coinbaseTx.vin.resize(1);
+    coinbaseTx.vout.resize(bribeCommitments.size() + 1);
+    uint160 dummy;
+    CScript minerScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(dummy) << OP_EQUALVERIFY << OP_CHECKSIG;
+    CTxOut minerOutput = CTxOut(CAmount(50), minerScript);
+    coinbaseTx.vout[0] = minerOutput;
+    for (unsigned int i = 1; i < bribeCommitments.size() + 1; i++) {
+        coinbaseTx.vout[i] = CTxOut(CAmount(0), bribeCommitments[i-1]);
+    }
+    return CTransaction(coinbaseTx);
+}
+void DoTest(const CScript& scriptPubKey, const CScript& scriptSig, const CScriptWitness& scriptWitness, int flags, const std::string& message, int scriptError, std::vector<CScript>& bribeCommitments, CAmount nValue = 0)
 {
     bool expect = (scriptError == SCRIPT_ERR_OK);
     if (flags & SCRIPT_VERIFY_CLEANSTACK) {
@@ -165,7 +186,7 @@ void DoTest(const CScript& scriptPubKey, const CScript& scriptSig, const CScript
     CMutableTransaction txCredit = BuildCreditingTransaction(scriptPubKey, nValue);
     CMutableTransaction tx = BuildSpendingTransaction(scriptSig, scriptWitness, txCredit);
     CMutableTransaction tx2 = tx;
-    const CTransactionRef& coinbaseTx = MakeTransactionRef(txCredit);
+    const CTransactionRef& coinbaseTx = MakeTransactionRef(BuildCoinbaseTransaction(bribeCommitments));
     BOOST_CHECK_MESSAGE(VerifyScript(scriptSig, scriptPubKey, &scriptWitness, flags, MutableTransactionSignatureChecker(&tx, 0, txCredit.vout[0].nValue, coinbaseTx), &err) == expect, message);
     BOOST_CHECK_MESSAGE(err == scriptError, std::string(FormatScriptError(err)) + " where " + std::string(FormatScriptError((ScriptError_t)scriptError)) + " expected: " + message);
 #if defined(HAVE_CONSENSUS_LIB)
@@ -421,7 +442,8 @@ public:
     {
         TestBuilder copy = *this; // Make a copy so we can rollback the push.
         DoPush();
-        DoTest(creditTx->vout[0].scriptPubKey, spendTx.vin[0].scriptSig, scriptWitness, flags, comment, scriptError, nValue);
+	std::vector<CScript> bribeCommitments;
+        DoTest(creditTx->vout[0].scriptPubKey, spendTx.vin[0].scriptSig, scriptWitness, flags, comment, scriptError, bribeCommitments, nValue);
         *this = copy;
         return *this;
     }
@@ -986,8 +1008,14 @@ BOOST_AUTO_TEST_CASE(script_json_test)
         CScript scriptPubKey = ParseScript(scriptPubKeyString);
         unsigned int scriptflags = ParseScriptFlags(test[pos++].get_str());
         int scriptError = ParseScriptError(test[pos++].get_str());
-
-        DoTest(scriptPubKey, scriptSig, witness, scriptflags, strTest, scriptError, nValue);
+	std::vector<CScript> bribeCommitments;
+	if (test[pos].isArray()) {
+	    //means we have a critical hash coinbase array
+            for (unsigned int i = 0; i < test[pos].size(); i++) {
+	        bribeCommitments.push_back(ParseBribeCommitment(test[pos][i].get_str()));
+            }
+	}
+        DoTest(scriptPubKey, scriptSig, witness, scriptflags, strTest, scriptError, bribeCommitments, nValue);
     }
 }
 

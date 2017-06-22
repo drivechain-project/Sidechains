@@ -446,7 +446,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 		    }
                     
 		    // Check h*
-                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-1),nSidechainId);
+                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-2),nSidechainId);
 		    if (!fHashCritical) {
 		   	return set_error(serror, SCRIPT_ERR_UNSATISFIED_BRIBE); 
 		    }
@@ -1391,7 +1391,7 @@ bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned c
     if (!commitment.IsBribeCommitment()) { 
         return false;
     }
-    std::vector<unsigned char> headerCommitment(commitment.begin() + 1, commitment.end()); 
+    std::vector<unsigned char> headerCommitment(commitment.begin() + 2, commitment.end());
     return headerCommitment == vchHash;
 }
 bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const

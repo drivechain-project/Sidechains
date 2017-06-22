@@ -87,6 +87,10 @@ const char* ScriptErrorString(const ScriptError serror)
             return "Witness provided for non-witness script";
         case SCRIPT_ERR_WITNESS_PUBKEYTYPE:
             return "Using non-compressed keys in segwit";
+        case SCRIPT_ERR_UNSATISFIED_BRIBE:
+            return "Critical hash was not included in the coinbase tx";
+        case SCRIPT_ERR_UNKNOWN_SIDECHAIN:
+            return "Unkown sidechain for OP_BRIBEVERIFY";
         case SCRIPT_ERR_UNKNOWN_ERROR:
         case SCRIPT_ERR_ERROR_COUNT:
         default: break;

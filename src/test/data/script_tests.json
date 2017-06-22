@@ -2604,5 +2604,8 @@
 ["0 0x09 0x300602010102010101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0", "0x01 0x14 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0x01 0x14 CHECKMULTISIG NOT", "DERSIG", "OK", "BIP66-compliant but not NULLFAIL-compliant"],
 ["0 0x09 0x300602010102010101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0", "0x01 0x14 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0x01 0x14 CHECKMULTISIG NOT", "DERSIG,NULLFAIL", "NULLFAIL", "BIP66-compliant but not NULLFAIL-compliant"],
 
+["Format is: [[wit..., amount]?, scriptSig, scriptPubKey, flags, expected_scripterror, [coinbase script1, coinbase script2..]? ... comments]"],
+
+["00","0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b 1 NOP4", "BRIBEVERIFY", "OK", ["0 0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b"], "valid OP_BRIBEVERIFY"],
 ["The End"]
 ]
