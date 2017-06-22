@@ -5,6 +5,7 @@
 #ifndef BITCOIN_SIDECHAIN_H
 #define BITCOIN_SIDECHAIN_H
 
+#include "primitives/transaction.h"
 #include "pubkey.h"
 
 #include <array>
@@ -45,7 +46,7 @@ struct Sidechain {
 struct SidechainDeposit {
     uint8_t nSidechain;
     CKeyID keyID;
-    std::string hex;
+    CMutableTransaction tx;
 
     std::string ToString() const;
     bool operator==(const SidechainDeposit& a) const;

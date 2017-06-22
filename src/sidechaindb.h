@@ -26,7 +26,7 @@ class SidechainDB
 public:
     SidechainDB();
 
-    /** Add deposit to cache */
+    /** Add deposit(s) to cache */
     void AddDeposits(const std::vector<CTransaction>& vtx);
 
     /** Add a new WT^ to the database */
@@ -58,7 +58,7 @@ public:
      * updates the SCDB state during normal operation. The update
      * overload exists to facilitate testing.
      */
-    bool Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout);
+    bool Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout, std::string& strError);
 
     /** Update the DB state (public for unit tests) */
     bool Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid, bool fJustCheck = false);

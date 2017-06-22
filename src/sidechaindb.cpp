@@ -4,8 +4,6 @@
 
 #include "sidechaindb.h"
 
-#include "chain.h"
-#include "core_io.h"
 #include "primitives/transaction.h"
 #include "script/script.h"
 #include "sidechain.h"
@@ -49,7 +47,7 @@ void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx)
                 continue;
 
             SidechainDeposit deposit;
-            deposit.hex = EncodeHexTx(tx);
+            deposit.tx = tx;
             deposit.keyID = keyID;
             deposit.nSidechain = nSidechain;
 
@@ -200,7 +198,7 @@ bool SidechainDB::Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, 
     return (index.InsertMember(member));
 }
 
-bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout)
+bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vector<CTxOut>& vout, std::string& strError)
 {
     if (hashBlock.IsNull())
         return false;
@@ -240,7 +238,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
     if (vStateScript.size() == 1 && ApplyStateScript(vStateScript[0], true)) {
         ApplyStateScript(vStateScript[0]);
     } else {
-        LogPrintf("SidechainDB::Update: failed to apply state script\n");
+        strError = "SidechainDB::Update: failed to apply state script\n";
         ApplyDefaultUpdate();
     }
 
@@ -292,7 +290,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
         }
 
         if (!fValid) {
-            LogPrintf("SidechainDB::Update: h* with invalid block height ignored: %s\n", hashCritical.ToString());
+            strError = "SidechainDB::Update: h* invalid";
             continue;
         }
 

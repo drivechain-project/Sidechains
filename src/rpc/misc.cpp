@@ -694,13 +694,8 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
         throw std::runtime_error("No deposits in cache");
     const SidechainDeposit& deposit = vDeposit.back();
 
-    // Decode raw deposit hex
-    CMutableTransaction mtx;
-    if (!DecodeHexTx(mtx, deposit.hex))
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Cannot decode deposit");
-
     // Add deposit txid to set
-    uint256 txid = mtx.GetHash();
+    uint256 txid = deposit.tx.GetHash();
     std::set<uint256> setTxids;
     setTxids.insert(txid);
 
@@ -739,7 +734,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     CAmount amtUserInput = CAmount(0);
     CAmount amtReturning = CAmount(0);
     CAmount amtWithdrawn = CAmount(0);
-    GetSidechainValues(mtx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+    GetSidechainValues(deposit.tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
     std::vector<COutput> vSidechainCoins;
     pwalletMain->AvailableSidechainCoins(vSidechainCoins, nSidechain);
@@ -756,7 +751,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     obj.push_back(Pair("nsidechain", deposit.nSidechain));
     obj.push_back(Pair("keyID", deposit.keyID.ToString()));
     obj.push_back(Pair("amountUserPayout", ValueFromAmount(amtUserPayout)));
-    obj.push_back(Pair("txHex", deposit.hex));
+    obj.push_back(Pair("txHex", EncodeHexTx(deposit.tx)));
     obj.push_back(Pair("proofHex", strProofHex));
 
     ret.push_back(Pair("deposit", obj));

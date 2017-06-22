@@ -61,7 +61,7 @@ bool SidechainDeposit::operator==(const SidechainDeposit& a) const
 {
     return (a.nSidechain == nSidechain &&
             a.keyID == keyID &&
-            a.hex == hex);
+            a.tx == tx);
 }
 
 bool SidechainWTJoinState::IsNull() const
@@ -131,7 +131,7 @@ std::string SidechainDeposit::ToString() const
     std::stringstream ss;
     ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "keyID=" << keyID.ToString() << std::endl;
-    ss << "hex=" << hex << std::endl;
+    ss << "txid=" << tx.GetHash().ToString() << std::endl;
     return ss.str();
 }
 

@@ -73,7 +73,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
     uint256 hashBlock = Params().GetConsensus().hashGenesisBlock;
 
     // Update SCDB (will clear out old data from first period)
-    scdb.Update(test.GetTau(), hashBlock, mtx.vout);
+    std::string strError = "";
+    scdb.Update(test.GetTau(), hashBlock, mtx.vout, strError);
 
     // WT^ hash for second period
     uint256 hashWTTest2 = GetRandHash();
@@ -266,7 +267,8 @@ BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashValid)
 
     // Update SCDB so that h* is processed
     uint256 hashBlock = GetRandHash();
-    scdb.Update(0, hashBlock, mtx.vout);
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Get linking data
     std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
@@ -297,7 +299,8 @@ BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashInvalid)
 
     // Update SCDB so that h* is processed
     uint256 hashBlock = GetRandHash();
-    scdb.Update(0, hashBlock, mtx.vout);
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Verify that h* was rejected, linking data should be empty
     std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
@@ -328,7 +331,8 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberValid)
 
     // Update SCDB so that first h* is processed
     uint256 hashBlock = GetRandHash();
-    scdb.Update(0, hashBlock, mtx.vout);
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Now we add a second h* with a valid block number
 
@@ -339,7 +343,7 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberValid)
 
     // Update SCDB so that second h* is processed
     mtx.vout[0] = CTxOut(50 * CENT, scriptPubKey2);
-    scdb.Update(0, hashBlock, mtx.vout);
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Get linking data
     std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
@@ -373,7 +377,8 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberInvalid)
 
     // Update SCDB so that first h* is processed
     uint256 hashBlock = GetRandHash();
-    scdb.Update(0, hashBlock, mtx.vout);
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Now we add a second h* with an invalid block number
 
@@ -384,7 +389,7 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberInvalid)
 
     // Update SCDB so that second h* is processed
     mtx.vout[0] = CTxOut(50 * CENT, scriptPubKey2);
-    scdb.Update(0, hashBlock, mtx.vout);
+    scdb.Update(0, hashBlock, mtx.vout, strError);
 
     // Get linking data
     std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
