@@ -2617,5 +2617,6 @@
 ["","0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b 3 NOP4", "BRIBEVERIFY", "UNKNOWN_SIDECHAIN", ["0 0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b"], "valid critical hash, but invalid sidechain id"],
 ["","0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b 256 NOP4 DROP DROP 1", "BRIBEVERIFY", "UNKNOWN_SIDECHAIN", ["0 0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b"], "valid critical hash, but sidechain id out of bounds"],
 ["","0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b 0 NOP4 DROP DROP 1", "BRIBEVERIFY", "UNSATISFIED_BRIBE", "no critical hashes"],
+["","0x20 0xbea681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b 0 NOP4 1", "BRIBEVERIFY", "OK", ["1 0x20 0xabc681d3fac2f47df7fba3fd97e87639c580ad3506e3a75d8e5bc758a932286b"], "incorrect critical hash, but version that hasn't been used yet much return true for future soft fork compatability"],
 ["The End"]
 ]
