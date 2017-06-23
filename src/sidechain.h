@@ -90,6 +90,6 @@ static const Sidechain ValidSidechains[] =
     {SIDECHAIN_WIMBLE, 100, 200, 100},
 };
 
-bool SidechainNumberValid(uint8_t nSidechain);
+bool IsSidechainNumberValid(const uint8_t nSidechain);
 
 #endif // BITCOIN_SIDECHAIN_H

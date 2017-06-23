@@ -32,7 +32,7 @@ void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx)
                 continue;
 
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-            if (!SidechainNumberValid(nSidechain))
+            if (!IsSidechainNumberValid(nSidechain))
                 continue;
 
             CScript::const_iterator pkey = scriptPubKey.begin() + 2;
@@ -67,7 +67,7 @@ bool SidechainDB::AddWTJoin(uint8_t nSidechain, const CTransaction& tx)
 {
     if (vWTJoinCache.size() >= SIDECHAIN_MAX_WT)
         return false;
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return false;
     if (HaveWTJoinCached(tx.GetHash()))
         return false;
@@ -112,7 +112,7 @@ CTransaction SidechainDB::GetWTJoinTx(uint8_t nSidechain, int nHeight) const
 {
     if (!HasState())
         return CTransaction();
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return CTransaction();
 
     const Sidechain& sidechain = ValidSidechains[nSidechain];
@@ -288,7 +288,7 @@ uint256 SidechainDB::GetSCDBHash() const
 
 bool SidechainDB::Update(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid, bool fJustCheck)
 {
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return false;
 
     SidechainWTJoinState member;
@@ -453,7 +453,7 @@ bool SidechainDB::HasState() const
 
 std::vector<SidechainWTJoinState> SidechainDB::GetState(uint8_t nSidechain) const
 {
-    if (!HasState() || !SidechainNumberValid(nSidechain))
+    if (!HasState() || !IsSidechainNumberValid(nSidechain))
         return std::vector<SidechainWTJoinState>();
 
     std::vector<SidechainWTJoinState> vState;
@@ -482,7 +482,7 @@ bool SidechainDB::ApplyStateScript(const CScript& script, bool fJustCheck)
     uint8_t nSidechainIndex = 0;
     size_t nWTIndex = 0;
     for (size_t i = 3; i < script.size(); i++) {
-        if (!SidechainNumberValid(nSidechainIndex))
+        if (!IsSidechainNumberValid(nSidechainIndex))
             return false;
 
         // Move on to this sidechain's next WT^
@@ -557,7 +557,7 @@ bool SidechainDB::ApplyDefaultUpdate()
 
 bool SidechainDB::CheckWorkScore(const uint8_t& nSidechain, const uint256& wtxid) const
 {
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return false;
 
     std::vector<SidechainWTJoinState> vState = GetState(nSidechain);

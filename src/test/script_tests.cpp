@@ -122,7 +122,6 @@ ScriptError_t ParseScriptError(const std::string &name)
 CScript ParseBribeCommitment(const std::string& hashStr)
 {
     const CScript& script = ParseScript(hashStr);
-
     return script;
 }
 BOOST_FIXTURE_TEST_SUITE(script_tests, BasicTestingSetup)

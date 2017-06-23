@@ -1380,18 +1380,27 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
 
     return true;
 }
-bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, uint8_t& nSidechainId) const
+bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const
 {
     //TODO: Implement this, we need to look at the block this transaction is in 
     //to see if the coinbase transaction outputs cointains the given vchHash 
     //the given vchHash can ONLY onccur in the slot dedicated to nSidechainId
     //const CTransactionRef coinbaseTx = chain.Tip()->coinbase;
-    const CTxOut sidechainTxOut = (*coinbaseTx).vout[nSidechainId];
+    const std::vector<CTxOut> outputs = (*coinbaseTx).vout;
+    //-2 is for
+    //1.) standard off by one index,
+    //2.) we assume the coinbaseTx.vout[0] == miner coinbase output
+    if (outputs.size() <= 1 || ((outputs.size()-2) < nSidechainId)) {
+        //means the miner did not commit to the critical hash in the coinbase tx
+	return false;
+    }
+    const CTxOut sidechainTxOut = outputs[nSidechainId + 1];
     const CScript commitment = sidechainTxOut.scriptPubKey; 
     if (!commitment.IsBribeCommitment()) { 
-        return false;
+	return false;
     }
     std::vector<unsigned char> headerCommitment(commitment.begin() + 2, commitment.end());
+    
     return headerCommitment == vchHash;
 }
 bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
@@ -1400,8 +1409,9 @@ bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t
         return false;
     }
     //TODO: Look at this closer, is this safe??
-    nSidechainId = static_cast<uint8_t>(id.getint() & 0xff);
-    return true;
+    nSidechainId = static_cast<uint8_t>(id.getint());
+    bool result = IsSidechainNumberValid(nSidechainId);
+    return result;
 }
 
 static bool VerifyWitnessProgram(const CScriptWitness& witness, int witversion, const std::vector<unsigned char>& program, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)

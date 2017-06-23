@@ -647,7 +647,7 @@ UniValue receivesidechainwtjoin(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     uint8_t nSidechain = request.params[0].get_int();
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
     // Create CTransaction from hex
@@ -685,7 +685,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     uint8_t nSidechain = std::stoi(request.params[0].getValStr());
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
 #ifdef ENABLE_WALLET
