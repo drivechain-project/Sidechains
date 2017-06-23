@@ -1549,44 +1549,44 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
     }
 
-    // Synchronize SCDB
-    if (chainActive.Tip() && chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen())
-    {
-        // Find out how many blocks we need to update SCDB
-        const int nHeight = chainActive.Height();
-        int nTail = nHeight;
-        for (const Sidechain& s : ValidSidechains) {
-            int nLastTau = s.GetLastTauHeight(nHeight);
-            if (nLastTau < nTail)
-                nTail = nLastTau;
-        }
+//    // Synchronize SCDB
+//    if (chainActive.Tip() && chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen())
+//    {
+//        // Find out how many blocks we need to update SCDB
+//        const int nHeight = chainActive.Height();
+//        int nTail = nHeight;
+//        for (const Sidechain& s : ValidSidechains) {
+//            int nLastTau = s.GetLastTauHeight(nHeight);
+//            if (nLastTau < nTail)
+//                nTail = nLastTau;
+//        }
 
-        // Update SCDB
-        for (int i = nTail; i <= nHeight; i++) {
-            // Skip genesis block
-            if (i == 0)
-                continue;
+//        // Update SCDB
+//        for (int i = nTail; i <= nHeight; i++) {
+//            // Skip genesis block
+//            if (i == 0)
+//                continue;
 
-            CBlockIndex* pindex = chainActive[i];
-            // Check that block index exists
-            if (!pindex) {
-                LogPrintf("SCDB cannot read null block index. Exiting.\n");
-                return false;
-            }
+//            CBlockIndex* pindex = chainActive[i];
+//            // Check that block index exists
+//            if (!pindex) {
+//                LogPrintf("SCDB cannot read null block index. Exiting.\n");
+//                return false;
+//            }
 
-            // Check that coinbase is cached
-            if (!pindex->fCoinbase || !pindex->coinbase)
-                return InitError("Cannot initalize SCDB. Corrupt coinbase cache.\n");
+//            // Check that coinbase is cached
+//            if (!pindex->fCoinbase || !pindex->coinbase)
+//                return InitError("Cannot initalize SCDB. Corrupt coinbase cache.\n");
 
-            // Update SCDB
-            std::string strError = "";
-            if (!scdb.Update(i, pindex->GetBlockHash(), pindex->coinbase->vout, strError)) {
-                if (strError != "")
-                    LogPrintf("SCDB update error: %s\n", strError);
-                return InitError("Failed to initialize SCDB.\n");
-            }
-        }
-    }
+//            // Update SCDB
+//            std::string strError = "";
+//            if (!scdb.Update(i, pindex->GetBlockHash(), pindex->coinbase->vout, strError)) {
+//                if (strError != "")
+//                    LogPrintf("SCDB update error: %s\n", strError);
+//                return InitError("Failed to initialize SCDB.\n");
+//            }
+//        }
+//    }
 
     // As LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill the GUI during the last operation. If so, exit.
