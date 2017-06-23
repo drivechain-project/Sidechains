@@ -8,7 +8,6 @@
 #include "script/script.h"
 #include "sidechain.h"
 #include "uint256.h"
-#include "util.h"
 #include "utilstrencodings.h"
 
 SidechainDB::SidechainDB()
