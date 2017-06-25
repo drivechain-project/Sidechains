@@ -2594,6 +2594,13 @@ static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& sta
 
         if (nCoinbaseCached >= COINBASE_CACHE_TARGET + COINBASE_CACHE_PRUNE_DELAY)
             PruneCoinbaseCache();
+
+        // Update / synchronize SCDB
+        std::string strError = "";
+        if (!scdb.Update(chainActive.Height(), block.GetHash(), block.vtx[0]->vout, strError))
+            LogPrintf("SCDB failed to update with block: %s\n", block.GetHash().ToString());
+        if (strError != "")
+            LogPrintf("SCDB update error: %s\n", strError);
     }
 
     pindexNew->RaiseValidity(BLOCK_VALID_TRANSACTIONS);
@@ -2629,14 +2636,6 @@ static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& sta
             mapBlocksUnlinked.insert(std::make_pair(pindexNew->pprev, pindexNew));
         }
     }
-
-    // Update / synchronize SCDB
-    std::string strError = "";
-    if (!scdb.Update(chainActive.Height(), block.GetHash(), block.vtx[0]->vout, strError))
-        LogPrintf("SCDB failed to update with block: %s\n", block.GetHash().ToString());
-    if (strError != "")
-        LogPrintf("SCDB update error: %s\n", strError);
-
     return true;
 }
 

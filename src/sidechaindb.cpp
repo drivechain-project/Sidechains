@@ -203,9 +203,10 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
         return false;
 
     // If a sidechain's tau period ended, reset WT^ verification status
-    for (const Sidechain& s : ValidSidechains)
+    for (const Sidechain& s : ValidSidechains) {
         if (nHeight > 0 && (nHeight % s.GetTau()) == 0)
             SCDB[s.nSidechain].ClearMembers();
+    }
 
     /*
      * Only one state script of the current version is valid.
@@ -281,13 +282,12 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
 
             int nHeightMostRecent = it->second;
 
-            if (std::abs(nHeightMostRecent - nBlock.getint()) == 1)
+            if ((nBlock.getint() - nHeightMostRecent) <= 1)
                 fValid = true;
         } else {
             // No previous h* to compare with
             fValid = true;
         }
-
         if (!fValid) {
             strError = "SidechainDB::Update: h* invalid";
             continue;
