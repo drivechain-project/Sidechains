@@ -1714,7 +1714,11 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
         pwalletMain->postInitProcess(scheduler);
 #endif
 
-    // TODO move this & watch all of the sidechain's scripts
+#ifdef ENABLE_WALLET
+    // TODO move this
+    // TODO loop through and watch all ValidSidechain addresses.
+    // Only watching test sidechain until others exist.
+
     // Watch sidechain scripts
     pwalletMain->MarkDirty();
 
@@ -1728,6 +1732,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (ExtractDestination(script, destination)) {
         pwalletMain->SetAddressBook(destination, "SIDECHAIN_TEST", "receive");
     }
+#endif
 
     return !fRequestShutdown;
 }
