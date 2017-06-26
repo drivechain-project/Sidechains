@@ -28,6 +28,7 @@
 #include "txmempool.h"
 #include "util.h"
 #include "utilmoneystr.h"
+#include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "wallet/wallet.h"
 
@@ -332,15 +333,19 @@ int BlockAssembler::UpdatePackagesForAdded(const CTxMemPool::setEntries& already
 
 CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
 {
+    // The WT^ that will be created
+    CMutableTransaction mtx;
+
+#ifdef ENABLE_WALLET
     if (!scdb.HasState())
-        return CTransaction();
+        return mtx;
     if (!SidechainNumberValid(nSidechain))
-        return CTransaction();
+        return mtx;
 
     const Sidechain& sidechain = ValidSidechains[nSidechain];
 
     if (nHeight % sidechain.GetTau() != 0)
-        return CTransaction();
+        return mtx;
 
     // Select the highest scoring B-WT^ for sidechain this tau
     uint256 hashBest = uint256();
@@ -353,22 +358,21 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
         }
     }
     if (hashBest == uint256())
-        return CTransaction();
+        return mtx;
 
     // Is the selected B-WT^ verified?
     if (scoreBest < sidechain.nMinWorkScore)
-        return CTransaction();
+        return mtx;
 
     // Copy outputs from B-WT^
     std::vector<CTransaction> vWTJoin = scdb.GetWTJoinCache();
-    CMutableTransaction mtx; // WT^
     for (const CTransaction& tx : vWTJoin) {
         if (tx.GetHash() == hashBest)
             for (const CTxOut& out : tx.vout)
                 mtx.vout.push_back(out);
     }
     if (!mtx.vout.size())
-        return CTransaction();
+        return mtx;
 
     // Calculate the amount to be withdrawn by WT^
     CAmount amtBWT = CAmount(0);
@@ -392,7 +396,7 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
     std::vector<COutput> vSidechainCoins;
     pwalletMain->AvailableSidechainCoins(vSidechainCoins, 0);
     if (!vSidechainCoins.size())
-        return CTransaction();
+        return mtx;
 
     // Calculate amount returning to sidechain script
     CAmount returnAmount = CAmount(0);
@@ -406,18 +410,18 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
     mtx.vout.back().nValue -= amtBWT;
 
     if (mtx.vout.back().nValue < 0)
-        return CTransaction();
+        return mtx;
     if (!mtx.vin.size())
-        return CTransaction();
+        return mtx;
 
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(SIDECHAIN_TEST_PRIV);
     if (!fGood)
-        return CTransaction();
+        return mtx;
 
     CKey privKey = vchSecret.GetKey();
     if (!privKey.IsValid())
-        return CTransaction();
+        return mtx;
 
     // Set up keystore with sidechain's private key
     CBasicKeyStore tempKeystore;
@@ -430,11 +434,11 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
     SignatureData sigdata;
     bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
     if (!sigCreated)
-        return CTransaction();
+        return mtx;
 
     mtx.vin[0].scriptSig = sigdata.scriptSig;
+#endif
 
-    // Return completed WT^
     return mtx;
 }
 
