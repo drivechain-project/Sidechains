@@ -783,7 +783,6 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
         // ... and merge in other signatures:
         BOOST_FOREACH(const CMutableTransaction& txv, txVariants) {
             if (txv.vin.size() > i) {
-               	const CTransactionRef coinbaseTx = chainActive.Tip()->coinbase; 
 		sigdata = CombineSignatures(prevPubKey, TransactionSignatureChecker(&txConst, i, amount, coinbaseTx), sigdata, DataFromTransaction(txv, i));
             }
         }

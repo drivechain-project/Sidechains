@@ -7,9 +7,7 @@
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
 #include "script_error.h"
-#include "validation.h"
 #include "sidechain.h"
-#include "chain.h"
 #include "primitives/transaction.h"
 #include <vector>
 #include <stdint.h>
@@ -167,8 +165,8 @@ private:
     const CTransaction* txTo;
     unsigned int nIn;
     const CAmount amount;
-    const PrecomputedTransactionData* txdata;
     const CTransactionRef& coinbaseTx;
+    const PrecomputedTransactionData* txdata;
 protected:
     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
 

@@ -9,7 +9,6 @@
 #include "pubkey.h"
 #include "script/interpreter.h"
 #include "version.h"
-#include "validation.h"
 
 namespace {
 
@@ -96,9 +95,9 @@ static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptP
 
         // Regardless of the verification result, the tx did not error.
         set_error(err, bitcoinconsensus_ERR_OK);
-	TxInputStream stream2(SER_NETWORK,PROTOCOL_VERSION, coinbaseTxIn, coinbaseTxInLen);
+        TxInputStream stream2(SER_NETWORK,PROTOCOL_VERSION, coinbaseTxIn, coinbaseTxInLen);
         CTransaction coinbaseTx(deserialize,stream2); 
-	const CTransactionRef& coinbaseTxRef = MakeTransactionRef(coinbaseTx); 
+        const CTransactionRef& coinbaseTxRef = MakeTransactionRef(coinbaseTx);
         PrecomputedTransactionData txdata(tx);
         return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), &tx.vin[nIn].scriptWitness, flags, 
 	    TransactionSignatureChecker(&tx, nIn, amount, coinbaseTxRef, txdata), NULL);

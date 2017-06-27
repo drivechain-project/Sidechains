@@ -5,7 +5,6 @@
 
 #include "interpreter.h"
 
-#include "validation.h"
 #include "primitives/transaction.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
@@ -446,7 +445,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 		    }
                     
 		    // Check h*
-                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-2),nSidechainId);
+		    bool fHashCritical = checker.CheckCriticalHash(stacktop(-2),nSidechainId);
 		    if (!fHashCritical) {
 		   	return set_error(serror, SCRIPT_ERR_UNSATISFIED_BRIBE); 
 		    }
@@ -1192,7 +1191,6 @@ uint256 GetOutputsHash(const CTransaction& txTo) {
     }
     return ss.GetHash();
 }
-
 
 } // anon namespace
 

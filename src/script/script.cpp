@@ -5,6 +5,7 @@
 
 #include "script.h"
 
+#include "sidechain.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
@@ -266,31 +267,33 @@ bool CScript::IsBribeCommitment(int& version, std::vector<unsigned char>& commit
     if ((*this)[0] >= OP_1 || (*this)[0] <= OP_16) {
         //we need this for soft fork safeness in the future for new bribe commitment schemes
         version = DecodeOP_N((opcodetype)(*this)[0]);
-	return true;
+        return true;
     }
     return false;
 }
 
 bool CScript::IsBribe() const
 {
-    // TODO
-    // Size must be at least:
-    // sizeof(uint256) to include h*
-    // +
-    // sizeof(uint160) for keyID
-    // +
-    // opcode count
-    //
+    //assuming format is: <pushop> <hash> <pushop?> <sidechainid> OP_NOP4
     size_t size = this->size();
-    if (size < 32)
+    if (size != 35 || size != 36) {
         return false;
-
+    }
+    if ((*this)[0] != 0x20) {
+        return false;
+    }
+    if (!IsSidechainNumberValid((*this)[size - 2])) {
+        return false;
+    }
+    if ((*this)[size-1] != OP_NOP4) {
+        return false;
+    }
     // TODO
     // The format of a bribe script is currently being discussed on the
     // bitcoin-dev mailing list. For now we are just checking if the script
     // is large enough to contain an h* and contains an OP_BRIBEVERIFY op.
 
-    return (this->Find(OP_NOP4));
+    return true;
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const
