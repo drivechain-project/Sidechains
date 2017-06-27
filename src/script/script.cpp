@@ -252,24 +252,15 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsBribeCommitment(int& version, std::vector<unsigned char>& commitment) const {
-    if (this->size() < 4 || this->size() > 100) {
+bool CScript::IsBribeCommitment(std::vector<unsigned char>& commitment) const {
+    if (this->size() < 34) {
         return false;
     }
-    if ((*this)[0] != OP_0 && ((*this)[0] < OP_1 || (*this)[0] > OP_16)) {
-        return false;
-    }
-    if (((*this)[0] == OP_0) && ((*this)[1] == 0x20) && (this->size() == 34)) {
-        version = DecodeOP_N((opcodetype)(*this)[0]);
+    if (((*this)[0] == OP_RETURN) && ((*this)[1] == 0x20) && (this->size() == 34)) {
         commitment = std::vector<unsigned char>(this->begin() + 2, this->end());
         return true;
     }
-    if ((*this)[0] >= OP_1 || (*this)[0] <= OP_16) {
-        //we need this for soft fork safeness in the future for new bribe commitment schemes
-        version = DecodeOP_N((opcodetype)(*this)[0]);
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool CScript::IsBribe() const

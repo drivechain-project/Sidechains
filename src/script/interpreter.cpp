@@ -1381,26 +1381,21 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
 bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const
 {
     const std::vector<CTxOut>& outputs = (*coinbaseTx).vout;
-    //-2 is for
+    //-3 is for
     //1.) standard off by one index,
     //2.) we assume the coinbaseTx.vout[0] == miner coinbase output
+    //3.) we assume the coinbaseTx.vout[1] == witness commitment
     if (outputs.size() <= 1 || ((outputs.size()-2) < nSidechainId)) {
         //means the miner did not commit to the critical hash in the coinbase tx
 	return false;
     }
     const CTxOut& sidechainTxOut = outputs[nSidechainId + 1];
     const CScript& commitment = sidechainTxOut.scriptPubKey;
-    int version;
     std::vector<unsigned char> headerCommitment;
-    if (!commitment.IsBribeCommitment(version,headerCommitment)) {
+    if (!commitment.IsBribeCommitment(headerCommitment)) {
 	return false;
     }
-    //TODO: Think about this with DISCOURAGE_UPGRADABLE_NOPs
-    //return true if we haven't used the version yet for future soft fork compatibility
-    if (version == 0) {
-        return headerCommitment == vchHash;
-    }
-    return true;
+    return headerCommitment == vchHash;
 }
 bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
 { 
