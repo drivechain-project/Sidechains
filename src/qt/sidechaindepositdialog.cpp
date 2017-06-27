@@ -75,6 +75,7 @@ void SidechainDepositDialog::on_pushButtonDeposit_clicked()
         return;
     }
 
+#ifdef ENABLE_WALLET
     // Attempt to create the deposit
     const CAmount& nValue = ui->payAmount->value();
     CTransactionRef tx;
@@ -97,7 +98,7 @@ void SidechainDepositDialog::on_pushButtonDeposit_clicked()
     result += BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, nValue, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
-
+#endif
 }
 
 void SidechainDepositDialog::on_pushButtonPaste_clicked()

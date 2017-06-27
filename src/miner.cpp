@@ -30,7 +30,10 @@
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
+
+#ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
+#endif
 
 #include <algorithm>
 #include <queue>
