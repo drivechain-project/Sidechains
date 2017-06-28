@@ -356,6 +356,9 @@ std::vector<SidechainWTJoinState> SidechainDB::GetState(uint8_t nSidechain) cons
 
 bool SidechainDB::ApplyStateScript(const CScript& script, bool fJustCheck)
 {
+    if (!HasState())
+        return false;
+
     // Collect the current SCDB status
     std::vector<std::vector<SidechainWTJoinState>> vState;
     for (const Sidechain& s : ValidSidechains) {
