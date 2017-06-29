@@ -9,8 +9,6 @@
 #include "sidechain.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-#include "wallet/wallet.h"
-#include "validation.h"
 
 SidechainDB::SidechainDB()
 {

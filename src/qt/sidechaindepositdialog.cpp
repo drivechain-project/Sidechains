@@ -57,7 +57,7 @@ void SidechainDepositDialog::on_pushButtonDeposit_clicked()
 
     unsigned int nSidechain = ui->comboBoxSidechains->currentIndex();
 
-    if (!SidechainNumberValid(nSidechain)) {
+    if (!IsSidechainNumberValid(nSidechain)) {
         // Should never be displayed
         messageBox.setWindowTitle("Invalid sidechain selected");
         messageBox.exec();
