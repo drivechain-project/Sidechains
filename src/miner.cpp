@@ -342,7 +342,7 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
 #ifdef ENABLE_WALLET
     if (!scdb.HasState())
         return mtx;
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return mtx;
 
     const Sidechain& sidechain = ValidSidechains[nSidechain];
@@ -433,7 +433,8 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
 
     // Sign WT^ SCUTXO input
     const CTransaction& txToSign = mtx;
-    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT);
+    const CTransactionRef coinbaseTx = chainActive.Tip()->coinbase;
+    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT, coinbaseTx);
     SignatureData sigdata;
     bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
     if (!sigCreated)
