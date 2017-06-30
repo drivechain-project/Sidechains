@@ -1381,21 +1381,15 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
 bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const
 {
     const std::vector<CTxOut>& outputs = (*coinbaseTx).vout;
-    //-3 is for
-    //1.) standard off by one index,
-    //2.) we assume the coinbaseTx.vout[0] == miner coinbase output
-    //3.) we assume the coinbaseTx.vout[1] == witness commitment
-    if (outputs.size() <= 1 || ((outputs.size()-2) < nSidechainId)) {
-        //means the miner did not commit to the critical hash in the coinbase tx
-	return false;
+    for (unsigned int i = 0; i < outputs.size(); i++) { 
+        
+	const CScript& commitment = outputs[i].scriptPubKey;
+	std::vector<unsigned char> headerCommitment;
+        if (commitment.IsBribeCommitment(headerCommitment) && headerCommitment == vchHash) {
+	    return true;
+        }
     }
-    const CTxOut& sidechainTxOut = outputs[nSidechainId + 1];
-    const CScript& commitment = sidechainTxOut.scriptPubKey;
-    std::vector<unsigned char> headerCommitment;
-    if (!commitment.IsBribeCommitment(headerCommitment)) {
-	return false;
-    }
-    return headerCommitment == vchHash;
+    return false;
 }
 bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
 { 
