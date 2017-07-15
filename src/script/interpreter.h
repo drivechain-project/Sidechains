@@ -152,10 +152,6 @@ public:
          return false;
     }
 
-    virtual bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
-    { 
-         return false; 
-    }
     virtual ~BaseSignatureChecker() {}
 };
 
@@ -177,7 +173,6 @@ public:
     bool CheckLockTime(const CScriptNum& nLockTime) const;
     bool CheckSequence(const CScriptNum& nSequence) const;
     bool CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const;
-    bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const;
 };
 
 class MutableTransactionSignatureChecker : public TransactionSignatureChecker

@@ -23,6 +23,17 @@ bool IsSidechainNumberValid(const uint8_t nSidechain)
     }
 }
 
+bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId)
+{
+    if (id > CScriptNum(255) || id < CScriptNum(0)) {
+        return false;
+    }
+    //TODO: Look at this closer, is this safe??
+    nSidechainId = static_cast<uint8_t>(id.getint());
+    bool result = IsSidechainNumberValid(nSidechainId);
+    return result;
+}
+
 std::string Sidechain::GetSidechainName() const
 {
     // Check that number corresponds to a valid sidechain

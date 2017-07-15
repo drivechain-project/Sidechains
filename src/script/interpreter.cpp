@@ -440,7 +440,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 		    
 		    const CScriptNum scriptNumSidechainId(stacktop(-1),fRequireMinimal);
 		    uint8_t nSidechainId;  
-		    if (!checker.CheckSidechainId(scriptNumSidechainId,nSidechainId)) {
+		    if (!CheckSidechainId(scriptNumSidechainId,nSidechainId)) {
 		   	return set_error(serror, SCRIPT_ERR_UNKNOWN_SIDECHAIN); 
 		    }
                     
@@ -1383,23 +1383,15 @@ bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned c
     const std::vector<CTxOut>& outputs = (*coinbaseTx).vout;
     for (unsigned int i = 0; i < outputs.size(); i++) { 
         
-	const CScript& commitment = outputs[i].scriptPubKey;
+	const CScript& spk = outputs[i].scriptPubKey;
+        //TODO: Probably shouldn't initialize this to 0, as this can be a valid drivechain id
+	uint8_t id;
 	std::vector<unsigned char> headerCommitment;
-        if (commitment.IsBribeCommitment(headerCommitment) && headerCommitment == vchHash) {
+        if (spk.IsBribeCommitment(id,headerCommitment) && headerCommitment == vchHash && nSidechainId == id) {
 	    return true;
         }
     }
     return false;
-}
-bool TransactionSignatureChecker::CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId) const
-{ 
-    if (id > CScriptNum(255) || id < CScriptNum(0)) {
-        return false;
-    }
-    //TODO: Look at this closer, is this safe??
-    nSidechainId = static_cast<uint8_t>(id.getint());
-    bool result = IsSidechainNumberValid(nSidechainId);
-    return result;
 }
 
 static bool VerifyWitnessProgram(const CScriptWitness& witness, int witversion, const std::vector<unsigned char>& program, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)

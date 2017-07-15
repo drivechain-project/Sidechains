@@ -252,14 +252,35 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsBribeCommitment(std::vector<unsigned char>& commitment) const {
-    if (this->size() < 34) {
+bool CScript::IsBribeCommitment(uint8_t& nSidechainId, std::vector<unsigned char>& commitment) const {
+    //assuming format: OP_RETURN <pushop> <hash> <pushop?> <sidechainid>
+    size_t size = this->size();
+    if (size != 35 && size != 36) {
         return false;
     }
-    if (((*this)[0] == OP_RETURN) && ((*this)[1] == 0x20) && (this->size() == 34)) {
-        commitment = std::vector<unsigned char>(this->begin() + 2, this->end());
-        return true;
+    if ((*this)[0] != OP_RETURN) {
+        return false;
     }
+    if ((*this)[1] != 0x20) {
+        return false;
+    }
+    std::vector<unsigned char> vec;
+    unsigned char ch = (*this)[size-1];
+    if (ch >= OP_1 && ch <= OP_16) {
+        CScriptNum bn((int)ch - (int)(OP_1 - 1));
+        vec = bn.getvch();
+    } else if (ch == 0) {
+        //TODO: investigate why we need this, we cannot do
+	//vec.push_back(0);
+    } else {
+        vec.push_back(ch);
+    }
+    CScriptNum num(vec,true);
+    bool isValidId = CheckSidechainId(num,nSidechainId);
+    if (!isValidId) {
+        return false;
+    }
+    commitment = std::vector<unsigned char>(this->begin() + 2, this->begin() + 2 + 32);
     return true;
 }
 

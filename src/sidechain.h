@@ -90,6 +90,11 @@ static const Sidechain ValidSidechains[] =
     {SIDECHAIN_WIMBLE, 100, 200, 100},
 };
 
+/** Checks if the given sidechain has been allocated in the sidechain db */
 bool IsSidechainNumberValid(const uint8_t nSidechain);
+
+/** Checks if the given CScriptNum id is valid, if so it converts it to a uint8_t
+  * and places it inside of the given uint8_t */
+bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId);
 
 #endif // BITCOIN_SIDECHAIN_H
