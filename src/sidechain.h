@@ -41,6 +41,7 @@ struct Sidechain {
     uint16_t GetTau() const;
     // Return height of the end of previous / beginning of current tau
     int GetLastTauHeight(int nHeight) const;
+    bool operator==(const Sidechain& a) const;
 };
 
 struct SidechainDeposit {
@@ -60,6 +61,8 @@ struct SidechainWTJoinState {
 
     std::string ToString() const;
     bool IsNull() const;
+    uint256 GetHash(void) const;
+    bool operator==(const SidechainWTJoinState& a) const;
 
     // For hash calculation
     ADD_SERIALIZE_METHODS
@@ -80,8 +83,11 @@ struct SCDBIndex {
     bool InsertMember(const SidechainWTJoinState& member);
     void ClearMembers();
     unsigned int CountPopulatedMembers() const;
+    bool Contains(uint256 hashWT) const;
+    bool GetMember(uint256 hashWT, SidechainWTJoinState& wt) const;
 };
 
+// TODO c++11 std::array
 static const Sidechain ValidSidechains[] =
 {
     // {nSidechain, nWaitPeriod, nVerificationPeriod, nMinWorkScore}

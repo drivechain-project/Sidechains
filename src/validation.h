@@ -44,6 +44,7 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 class SidechainDB;
+class SidechainWTJoinState;
 struct ChainTxData;
 
 struct PrecomputedTransactionData;
@@ -538,5 +539,17 @@ bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& s
 
 /** Verify txout proof */
 bool VerifyTxOutProof(const std::string& strProof);
+
+/** GetSCDBHash with a specified SCDB instead of main instance */
+uint256 GetSCDBHash(const SidechainDB& scdbCopy);
+
+/** GetSCDBHash */
+uint256 GetSCDBHash();
+
+/** GetHashIfUpdate */
+uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTJoinState>& vNewScores);
+
+/** UpdateMatchMT */
+bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot);
 
 #endif // BITCOIN_VALIDATION_H

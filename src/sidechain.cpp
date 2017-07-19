@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "sidechain.h"
+
+#include "hash.h"
 #include "utilstrencodings.h"
 
 #include <sstream>
@@ -57,6 +59,11 @@ int Sidechain::GetLastTauHeight(int nHeight) const
     return nHeight;
 }
 
+bool Sidechain::operator==(const Sidechain& a) const
+{
+    return (a.nSidechain == nSidechain);
+}
+
 bool SidechainDeposit::operator==(const SidechainDeposit& a) const
 {
     return (a.nSidechain == nSidechain &&
@@ -64,9 +71,20 @@ bool SidechainDeposit::operator==(const SidechainDeposit& a) const
             a.tx == tx);
 }
 
+bool SidechainWTJoinState::operator==(const SidechainWTJoinState& a) const
+{
+    return (a.nSidechain == nSidechain &&
+            a.wtxid == wtxid);
+}
+
 bool SidechainWTJoinState::IsNull() const
 {
     return (wtxid.IsNull());
+}
+
+uint256 SidechainWTJoinState::GetHash(void) const
+{
+    return SerializeHash(*this);
 }
 
 bool SCDBIndex::IsPopulated() const
@@ -116,6 +134,26 @@ unsigned int SCDBIndex::CountPopulatedMembers() const
     return nMembers;
 }
 
+bool SCDBIndex::Contains(uint256 hashWT) const
+{
+    for (const SidechainWTJoinState& member : members) {
+        if (!member.IsNull() && member.wtxid == hashWT)
+            return true;
+    }
+    return false;
+}
+
+bool SCDBIndex::GetMember(uint256 hashWT, SidechainWTJoinState& wt) const
+{
+    for (const SidechainWTJoinState& member : members) {
+        if (!member.IsNull() && member.wtxid == hashWT) {
+            wt = member;
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string Sidechain::ToString() const
 {
     std::stringstream ss;
@@ -138,6 +176,7 @@ std::string SidechainDeposit::ToString() const
 std::string SidechainWTJoinState::ToString() const
 {
     std::stringstream ss;
+    ss << "hash=" << GetHash().ToString() << std::endl;
     ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "nBlocksLeft=" << (unsigned int)nBlocksLeft << std::endl;
     ss << "nWorkScore=" << (unsigned int)nWorkScore << std::endl;

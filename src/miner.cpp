@@ -449,9 +449,15 @@ CTransaction BlockAssembler::CreateSidechainStateTx()
 {
     CMutableTransaction mtx;
 
-    CScript script = scdb.CreateStateScript(nHeight);
-    if (!script.empty())
-        mtx.vout.push_back(CTxOut(CENT, script));
+#ifdef ENABLE_WALLET
+    // TODO decide if we should put in uint256(0) or nothing
+    // if !scdb.HasState(). For now just publish whatever hash we have.
+    // TODO special SCDB MT hash script format or force specific output
+    // location to find MT hash when scanning new block.
+    CScript script;
+    script << OP_RETURN << ToByteVector(GetSCDBHash());
+    mtx.vout.push_back(CTxOut(CENT, script));
+#endif
 
     return mtx;
 }

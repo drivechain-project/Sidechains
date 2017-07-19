@@ -4294,6 +4294,76 @@ bool VerifyTxOutProof(const std::string& strProof)
     return true;
 }
 
+uint256 GetSCDBHash(const SidechainDB& scdbCopy)
+{
+    // TODO add LD data to the tree
+    std::vector<uint256> vLeaf;
+    for (const Sidechain& s : ValidSidechains) {
+        std::vector<SidechainWTJoinState> vState = scdbCopy.GetState(s.nSidechain);
+        for (const SidechainWTJoinState& state : vState) {
+            vLeaf.push_back(state.GetHash());
+        }
+    }
+    return ComputeMerkleRoot(vLeaf);
+}
+
+uint256 GetSCDBHash()
+{
+    return GetSCDBHash(scdb);
+}
+
+uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTJoinState>& vNewScores)
+{
+    SidechainDB scdbCopy = scdb;
+    scdbCopy.UpdateSCDBIndex(vNewScores);
+
+    return (GetSCDBHash(scdbCopy));
+}
+
+bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot)
+{
+    for (const Sidechain& sidechain : ValidSidechains) {
+        // Go through possible new states for this sidechain trying to match MT
+        std::vector<SidechainWTJoinState> vState = scdb.GetState(sidechain.nSidechain);
+        for (const SidechainWTJoinState& state : vState) {
+            // +1
+            {
+                SidechainWTJoinState stateCopy = state;
+                if (stateCopy.nBlocksLeft > 0) {
+                    stateCopy.nWorkScore++;
+                    stateCopy.nBlocksLeft--;
+                }
+
+                std::vector<SidechainWTJoinState> vUpdate;
+                vUpdate.push_back(stateCopy);
+
+                if (GetSCDBHashIfUpdate(vUpdate) == hashMerkleRoot) {
+                    scdb.UpdateSCDBIndex(vUpdate);
+                    return (GetSCDBHash() == hashMerkleRoot);
+                }
+            }
+
+            // -1
+            {
+                SidechainWTJoinState stateCopy = state;
+                if (stateCopy.nBlocksLeft > 0) {
+                    stateCopy.nWorkScore--;
+                    stateCopy.nBlocksLeft--;
+                }
+
+                std::vector<SidechainWTJoinState> vUpdate;
+                vUpdate.push_back(stateCopy);
+
+                if (GetSCDBHashIfUpdate(vUpdate) == hashMerkleRoot) {
+                    scdb.UpdateSCDBIndex(vUpdate);
+                    return (GetSCDBHash() == hashMerkleRoot);
+                }
+            }
+        }
+    }
+    return false;
+}
+
 class CMainCleanup
 {
 public:
