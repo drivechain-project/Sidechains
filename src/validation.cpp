@@ -2780,15 +2780,15 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     const CTransactionRef& coinbaseTx = block.vtx[0];
     std::vector<uint8_t> commitments;
     for (unsigned int i = 0; i < (*coinbaseTx).vout.size(); i++) {
-	const CScript& spk = (*coinbaseTx).vout[i].scriptPubKey;
+        const CScript& spk = (*coinbaseTx).vout[i].scriptPubKey;
         uint8_t nSidechainId;
-	std::vector<unsigned char> commitment;
+        std::vector<unsigned char> commitment;
         if (spk.IsBribeCommitment(nSidechainId,commitment)) {
 	    if ((std::find(commitments.begin(), commitments.end(), nSidechainId) != commitments.end())) {
-	        return state.DoS(100,false,REJECT_INVALID, "bad-chain-commitment", "We had multiple commitments for one drivechain");
+	        return state.DoS(100, false, REJECT_INVALID, "bad-chain-commitment", "We had multiple commitments for one drivechain");
 	    }
 	    commitments.push_back(nSidechainId);
-	}
+	} 
     }
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i]->IsCoinBase())

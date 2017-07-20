@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-bool IsSidechainNumberValid(const uint8_t nSidechain)
+bool IsSidechainNumberValid(const uint8_t& nSidechain)
 {
     if (!(nSidechain < ARRAYLEN(ValidSidechains)))
         return false;

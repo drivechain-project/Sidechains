@@ -91,7 +91,7 @@ static const Sidechain ValidSidechains[] =
 };
 
 /** Checks if the given sidechain has been allocated in the sidechain db */
-bool IsSidechainNumberValid(const uint8_t nSidechain);
+bool IsSidechainNumberValid(const uint8_t& nSidechain);
 
 /** Checks if the given CScriptNum id is valid, if so it converts it to a uint8_t
   * and places it inside of the given uint8_t */

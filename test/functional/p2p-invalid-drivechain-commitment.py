@@ -11,7 +11,10 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 import time
 from test_framework.blocktools import create_block, create_coinbase
-from test_framework.script import CScript, OP_RETURN, OP_0
+from test_framework.script import CScript, CScriptOp, OP_RETURN, OP_0
+
+REJECT_INVALID = 16
+
 class InvalidDrivechainCommitmentTest(BitcoinTestFramework):
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
@@ -50,17 +53,22 @@ class InvalidDrivechainCommitmentTest(BitcoinTestFramework):
         assert(self.nodes[0].getblockcount() == 1)
         assert(self.nodes[1].getblockcount() == 1)
         
-	#TODO: figure out a way to generate a random hash instead of using the getbestblockhash
-        drivechain_block_hash = self.nodes[0].getbestblockhash()
-        chain_commitment = CScript([OP_RETURN, bytearray.fromhex(drivechain_block_hash), OP_0])
+        drivechain_block_hash = os.urandom(32)
+        chain_commitment = CScript([CScriptOp(OP_RETURN),drivechain_block_hash, CScriptOp(OP_0)])
         #This creates two commitments for the same drivechain -- this is invalid so the block should not be accepted
         chain_commitments = [chain_commitment, chain_commitment]
         hashPrev = self.nodes[0].getbestblockhash()
         block = create_block(int("0x" + hashPrev, 0), create_coinbase(2,None,chain_commitments))
         block.solve()
-        #Is this propogating the block correctly????
         node0.send_message(msg_block(block))
         self.log.info("block.hash: " + str(block.hash))
+
+        assert wait_until(lambda: "reject" in node0.last_message.keys())
+        with mininode_lock:
+            assert_equal(node0.last_message["reject"].code, REJECT_INVALID)
+            assert_equal(node0.last_message["reject"].reason, b'bad-chain-commitment')
+            assert_equal(node0.last_message["reject"].data, block.sha256)
+
         assert(self.nodes[0].getbestblockhash() != block.hash)
         assert(self.nodes[1].getbestblockhash() != block.hash)
         assert(self.nodes[0].getbestblockhash() == self.nodes[1].getbestblockhash())

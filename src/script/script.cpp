@@ -270,8 +270,7 @@ bool CScript::IsBribeCommitment(uint8_t& nSidechainId, std::vector<unsigned char
         CScriptNum bn((int)ch - (int)(OP_1 - 1));
         vec = bn.getvch();
     } else if (ch == 0) {
-        //TODO: investigate why we need this, we cannot do
-	//vec.push_back(0);
+        //OP_0 is represented as the empty vector, so push nothing on to vec
     } else {
         vec.push_back(ch);
     }
