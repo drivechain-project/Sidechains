@@ -744,9 +744,10 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     for (const COutput& output : vSidechainCoins)
         amtSidechainUTXO += output.tx->tx->vout[output.i].nValue;
 
-    // TODO use BMM to calculate
+    // TODO Decide if we should seperate sidechain change
+    // and deposit payout to keyID here. Currently the sidechain
+    // is responsible for handling their own change.
     CAmount amtUserPayout = amtReturning;
-
 #endif
 
     UniValue ret(UniValue::VOBJ);

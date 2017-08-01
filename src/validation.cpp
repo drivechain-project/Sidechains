@@ -1812,6 +1812,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
 
+    // Add deposits to SCDB deposit cache
     if (vDepositTx.size())
         scdb.AddDeposits(vDepositTx);
 

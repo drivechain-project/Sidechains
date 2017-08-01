@@ -2772,10 +2772,6 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // Select coins to cover sidechain deposit
     std::vector<COutput> vCoins;
     AvailableCoins(vCoins);
-//(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl *coinControl = NULL) const;
-//CTxIn(uint256 hashPrevTx, uint32_t nOut, CScript scriptSigIn=CScript(), uint32_t nSequenceIn=SEQUENCE_FINAL);
-
-//    std::set<std::pair<const CWalletTx*,unsigned int> > setCoins;
     std::set<CInputCoin> setCoins;
     CAmount nAmountRet = CAmount(0);
     if (!SelectCoins(vCoins, nAmount, setCoins, nAmountRet)) {
