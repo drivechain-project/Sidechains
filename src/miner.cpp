@@ -203,9 +203,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             pblock->vtx.push_back(MakeTransactionRef(std::move(wtx)));
     }
 
-    // Add SidechainDB state
-    CTransaction stateTx = CreateSidechainStateTx();
-    for (const CTxOut& out : stateTx.vout) {
+    // Add SidechainDB hash
+    CTransaction scdbTx = CreateSidechainDBHashTx();
+    for (const CTxOut& out : scdbTx.vout) {
         coinbaseTx.vout.push_back(out);
         nSideFees += out.nValue;
     }
@@ -445,18 +445,17 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
     return mtx;
 }
 
-CTransaction BlockAssembler::CreateSidechainStateTx()
+CTransaction BlockAssembler::CreateSidechainDBHashTx()
 {
     CMutableTransaction mtx;
 
 #ifdef ENABLE_WALLET
-    // TODO decide if we should put in uint256(0) or nothing
-    // if !scdb.HasState(). For now just publish whatever hash we have.
-    // TODO special SCDB MT hash script format or force specific output
-    // location to find MT hash when scanning new block.
-    CScript script;
-    script << OP_RETURN << ToByteVector(GetSCDBHash());
-    mtx.vout.push_back(CTxOut(CENT, script));
+    if (scdb.HasState()) {
+        CScript script;
+        // TODO custom format
+        script << OP_RETURN << ToByteVector(GetSCDBHash());
+        mtx.vout.push_back(CTxOut(CENT, script));
+    }
 #endif
 
     return mtx;
