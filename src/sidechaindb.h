@@ -78,9 +78,6 @@ public:
     /** Update / add multiple SCDB WT^(s) to SCDB */
     bool UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewScores);
 
-    /** Update / add single WT^(s) to SCDB */
-    bool UpdateSCDBIndex(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid);
-
 private:
     /** Sidechain "database" tracks verification status of WT^(s) */
     std::vector<SCDBIndex> SCDB;

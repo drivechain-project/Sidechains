@@ -71,7 +71,18 @@ bool SidechainDB::AddWTJoin(uint8_t nSidechain, const CTransaction& tx)
         return false;
 
     const Sidechain& s = ValidSidechains[nSidechain];
-    if (UpdateSCDBIndex(nSidechain, s.GetTau(), 0, tx.GetHash())) {
+
+    std::vector<SidechainWTJoinState> vWT;
+
+    SidechainWTJoinState wt;
+    wt.nSidechain = nSidechain;
+    wt.nBlocksLeft = s.GetTau();
+    wt.nWorkScore = 0;
+    wt.wtxid = tx.GetHash();
+
+    vWT.push_back(wt);
+
+    if (UpdateSCDBIndex(vWT)) {
         vWTJoinCache.push_back(tx);
         return true;
     }
@@ -348,7 +359,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewS
             return false;
     }
 
-    // Now decrement nBlocksLeft of all WT^(s)
+    // Decrement nBlocksLeft of existing WT^(s)
     for (const Sidechain& s : ValidSidechains) {
         SCDBIndex& index = SCDB[s.nSidechain];
         for (SidechainWTJoinState wt : index.members) {
@@ -358,13 +369,13 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewS
         }
     }
 
-    // Finally apply new scores to WT^(s)
+    // Apply new work scores
     for (const SidechainWTJoinState& s : vNewScores) {
         SCDBIndex& index = SCDB[s.nSidechain];
         SidechainWTJoinState wt;
         if (index.GetMember(s.wtxid, wt)) {
             // Update an existing WT^
-            // TODO use abs instead (caused build issues).
+            // Check that new work score is valid
             if ((wt.nWorkScore == s.nWorkScore) ||
                     (s.nWorkScore == (wt.nWorkScore + 1)) ||
                     (s.nWorkScore == (wt.nWorkScore - 1)))
@@ -383,22 +394,4 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewS
         }
     }
     return true;
-}
-
-bool SidechainDB::UpdateSCDBIndex(uint8_t nSidechain, uint16_t nBlocks, uint16_t nScore, uint256 wtxid)
-{
-    if (!SidechainNumberValid(nSidechain))
-        return false;
-
-    SidechainWTJoinState wt;
-    wt.nBlocksLeft = nBlocks;
-    wt.nSidechain = nSidechain;
-    wt.nWorkScore = nScore;
-    wt.wtxid = wtxid;
-
-    std::vector<SidechainWTJoinState> vNewScores;
-    vNewScores.push_back(wt);
-
-    // Insert member
-    return (UpdateSCDBIndex(vNewScores));
 }
