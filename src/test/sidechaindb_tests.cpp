@@ -28,7 +28,6 @@ BOOST_FIXTURE_TEST_SUITE(sidechaindb_tests, TestChain100Setup)
 BOOST_AUTO_TEST_CASE(sidechaindb_isolated)
 {
     // Test SidechainDB without blocks
-    scdb.Reset();
 
     uint256 hashWTTest = GetRandHash();
     uint256 hashWTHivemind = GetRandHash();
@@ -84,13 +83,15 @@ BOOST_AUTO_TEST_CASE(sidechaindb_isolated)
     BOOST_CHECK(!scdb.CheckWorkScore(SIDECHAIN_HIVEMIND, hashWTHivemind));
     // WT^ 2 should fail with unsatisfied workscore (0/100)
     BOOST_CHECK(!scdb.CheckWorkScore(SIDECHAIN_WIMBLE, hashWTWimble));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
 {
     // Test SCDB with multiple tau periods,
     // approve multiple WT^s on the same sidechain.
-    scdb.Reset();
     const Sidechain& test = ValidSidechains[SIDECHAIN_TEST];
 
     // WT^ hash for first period
@@ -152,13 +153,15 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
         scdb.UpdateSCDBIndex(vWT);
     }
     BOOST_CHECK(scdb.CheckWorkScore(SIDECHAIN_TEST, hashWTTest2));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 // TODO move BMM tests into seperate file
 BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashValid)
 {
     // Check that valid critical hash is added to ratchet
-    scdb.Reset();
 
     // Create h* bribe script
     uint256 hashCritical = GetRandHash();
@@ -185,13 +188,14 @@ BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashValid)
     std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical);
     BOOST_CHECK(it != mapLD.end());
 
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashInvalid)
 {
     // Make sure that a invalid h* with a valid block number will
     // be rejected.
-    scdb.Reset();
 
     // Create h* bribe script
     CScript scriptPubKey;
@@ -213,13 +217,15 @@ BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashInvalid)
     // Verify that h* was rejected, linking data should be empty
     std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
     BOOST_CHECK(mapLD.empty());
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberValid)
 {
     // Make sure that a valid h* with a valid block number
     // will be accepted.
-    scdb.Reset();
 
     // We have to add the first h* to the ratchet so that
     // there is something to compare with.
@@ -259,13 +265,15 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberValid)
     // Verify that h* was added
     std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical2);
     BOOST_CHECK(it != mapLD.end());
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberInvalid)
 {
     // Try to add a valid h* with an invalid block number
     // and make sure it is skipped.
-    scdb.Reset();
 
     // We have to add the first h* to the ratchet so that
     // there is something to compare with.
@@ -309,6 +317,9 @@ BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberInvalid)
     // Verify that h* was rejected
     std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical2);
     BOOST_CHECK(it == mapLD.end());
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
@@ -316,7 +327,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     // Merkle tree based SCDB update test with only
     // SCDB data (no LD) in the tree, and a single
     // WT^ to be updated.
-    scdb.Reset();
 
     // Create SCDB with initial WT^
     std::vector<SidechainWTJoinState> vWT;
@@ -344,6 +354,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
 
     // Use MT hash prediction to update the original SCDB
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
@@ -352,7 +365,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     // that each have one WT^ to update. Only one WT^ out of the
     // three will be updated. This test ensures that nBlocksLeft is
     // properly decremented even when a WT^'s score is unchanged.
-    scdb.Reset();
 
     // Add initial WT^s to SCDB
     SidechainWTJoinState wtTest;
@@ -400,6 +412,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
 
     // Use MT hash prediction to update the original SCDB
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
@@ -408,7 +423,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     // and multiple WT^(s) being updated. This tests that MT based
     // SCDB update will work if work scores are updated for more
     // than one sidechain per block.
-    scdb.Reset();
 
     // Add initial WT^s to SCDB
     SidechainWTJoinState wtTest;
@@ -457,6 +471,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
 
     // Use MT hash prediction to update the original SCDB
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_max)
@@ -466,7 +483,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_max)
     // add as many WT^(s) as possible during a single tau period so
     // that we can test updating SCDB in the worst case scenario of
     // many WT^(s) being updated.
-    scdb.Reset();
 
     // TODO currently adding 50 WT^s to each sidechain.
     // Should add the maximum amount that could possibly
@@ -506,6 +522,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_max)
 
     // Now try to synchronize main SCDB with copy
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+
+    // Reset SCDB after testing
+    scdb.Reset();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
