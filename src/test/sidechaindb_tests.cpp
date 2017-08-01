@@ -39,18 +39,44 @@ BOOST_AUTO_TEST_CASE(sidechaindb_isolated)
     const Sidechain& wimble = ValidSidechains[SIDECHAIN_TEST];
 
     // SIDECHAIN_TEST
+    SidechainWTJoinState wtTest;
+    wtTest.wtxid = hashWTTest;
+    // Start at +1 because we decrement in the loop
+    wtTest.nBlocksLeft = test.GetTau() + 1;
+    wtTest.nSidechain = SIDECHAIN_TEST;
     for (int i = 0; i <= test.nMinWorkScore; i++) {
-        scdb.UpdateSCDBIndex(SIDECHAIN_TEST, test.GetTau() - i, i, hashWTTest);
+        std::vector<SidechainWTJoinState> vWT;
+        wtTest.nWorkScore = i;
+        wtTest.nBlocksLeft--;
+        vWT.push_back(wtTest);
+        scdb.UpdateSCDBIndex(vWT);
     }
 
     // SIDECHAIN_HIVEMIND
+    SidechainWTJoinState wtHivemind;
+    wtHivemind.wtxid = hashWTHivemind;
+    // Start at +1 because we decrement in the loop
+    wtHivemind.nBlocksLeft = hivemind.GetTau() + 1;
+    wtHivemind.nSidechain = SIDECHAIN_HIVEMIND;
     for (int i = 0; i <= (hivemind.nMinWorkScore / 2); i++) {
-        scdb.UpdateSCDBIndex(SIDECHAIN_HIVEMIND, hivemind.GetTau() - i, i, hashWTHivemind);
+         std::vector<SidechainWTJoinState> vWT;
+         wtHivemind.nWorkScore = i;
+         wtHivemind.nBlocksLeft--;
+         vWT.push_back(wtHivemind);
+         scdb.UpdateSCDBIndex(vWT);
     }
 
     // SIDECHAIN_WIMBLE
-    scdb.UpdateSCDBIndex(SIDECHAIN_WIMBLE, wimble.GetTau(), 0, hashWTWimble);
+    SidechainWTJoinState wtWimble;
+    wtWimble.wtxid = hashWTWimble;
+    // Start at +1 because we decrement in the loop
+    wtWimble.nBlocksLeft = wimble.GetTau() + 1;
+    wtWimble.nSidechain = SIDECHAIN_WIMBLE;
+    wtWimble.nWorkScore = 0;
 
+    std::vector<SidechainWTJoinState> vWT;
+    vWT.push_back(wtWimble);
+    scdb.UpdateSCDBIndex(vWT);
 
     // WT^ 0 should pass with valid workscore (100/100)
     BOOST_CHECK(scdb.CheckWorkScore(SIDECHAIN_TEST, hashWTTest));
@@ -71,8 +97,18 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
     uint256 hashWTTest1 = GetRandHash();
 
     // Verify first transaction, check work score
-    for (int i = 0; i <= test.nMinWorkScore; i++)
-        scdb.UpdateSCDBIndex(SIDECHAIN_TEST, test.GetTau() - i, i, hashWTTest1);
+    SidechainWTJoinState wt1;
+    wt1.wtxid = hashWTTest1;
+    // Start at +1 because we decrement in the loop
+    wt1.nBlocksLeft = test.GetTau() + 1;
+    wt1.nSidechain = SIDECHAIN_TEST;
+    for (int i = 0; i <= test.nMinWorkScore; i++) {
+        std::vector<SidechainWTJoinState> vWT;
+        wt1.nWorkScore = i;
+        wt1.nBlocksLeft--;
+        vWT.push_back(wt1);
+        scdb.UpdateSCDBIndex(vWT);
+    }
     BOOST_CHECK(scdb.CheckWorkScore(SIDECHAIN_TEST, hashWTTest1));
 
     // Create dummy coinbase tx
@@ -93,7 +129,14 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
     uint256 hashWTTest2 = GetRandHash();
 
     // Add new WT^
-    scdb.UpdateSCDBIndex(SIDECHAIN_TEST, test.GetTau(), 0, hashWTTest2);
+    std::vector<SidechainWTJoinState> vWT;
+    SidechainWTJoinState wt2;
+    wt2.wtxid = hashWTTest2;
+    wt2.nBlocksLeft = test.GetTau();
+    wt2.nSidechain = SIDECHAIN_TEST;
+    wt2.nWorkScore = 0;
+    vWT.push_back(wt2);
+    scdb.UpdateSCDBIndex(vWT);
     BOOST_CHECK(!scdb.CheckWorkScore(SIDECHAIN_TEST, hashWTTest2));
 
     // Verify that SCDB has updated to correct WT^
@@ -102,8 +145,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleTauPeriods)
 
     // Give second transaction sufficient workscore and check work score
     for (int i = 1; i <= test.nMinWorkScore; i++) {
-        scdb.UpdateSCDBIndex(SIDECHAIN_TEST, test.GetTau() - i, i, hashWTTest2);
-
+        std::vector<SidechainWTJoinState> vWT;
+        wt2.nWorkScore = i;
+        wt2.nBlocksLeft--;
+        vWT.push_back(wt2);
+        scdb.UpdateSCDBIndex(vWT);
     }
     BOOST_CHECK(scdb.CheckWorkScore(SIDECHAIN_TEST, hashWTTest2));
 }
@@ -273,14 +319,28 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     scdb.Reset();
 
     // Create SCDB with initial WT^
-    uint256 hashWT = GetRandHash();
-    scdb.UpdateSCDBIndex(SIDECHAIN_TEST, 300, 0, hashWT);
+    std::vector<SidechainWTJoinState> vWT;
+
+    SidechainWTJoinState wt;
+    wt.wtxid = GetRandHash();
+    wt.nBlocksLeft = ValidSidechains[SIDECHAIN_TEST].GetTau();
+    wt.nWorkScore = 0;
+    wt.nSidechain = SIDECHAIN_TEST;
+
+    vWT.push_back(wt);
+    scdb.UpdateSCDBIndex(vWT);
 
     // Create a copy of the SCDB to manipulate
     SidechainDB scdbCopy = scdb;
 
     // Update the SCDB copy to get a new MT hash
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_TEST, 299, 1, hashWT);
+    vWT.clear();
+
+    wt.nWorkScore++;
+    wt.nBlocksLeft--;
+
+    vWT.push_back(wt);
+    scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
@@ -295,20 +355,48 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     scdb.Reset();
 
     // Add initial WT^s to SCDB
-    uint256 hashWT1 = GetRandHash();
-    uint256 hashWT2 = GetRandHash();
-    uint256 hashWT3 = GetRandHash();
-    scdb.UpdateSCDBIndex(SIDECHAIN_TEST, 300, 0, hashWT1);
-    scdb.UpdateSCDBIndex(SIDECHAIN_HIVEMIND, 300, 0, hashWT2);
-    scdb.UpdateSCDBIndex(SIDECHAIN_WIMBLE, 300, 0, hashWT3);
+    SidechainWTJoinState wtTest;
+    wtTest.wtxid = GetRandHash();
+    wtTest.nBlocksLeft = ValidSidechains[SIDECHAIN_TEST].GetTau();
+    wtTest.nSidechain = SIDECHAIN_TEST;
+    wtTest.nWorkScore = 0;
+
+    SidechainWTJoinState wtHivemind;
+    wtHivemind.wtxid = GetRandHash();
+    wtHivemind.nBlocksLeft = ValidSidechains[SIDECHAIN_HIVEMIND].GetTau();
+    wtHivemind.nSidechain = SIDECHAIN_HIVEMIND;
+    wtHivemind.nWorkScore = 0;
+
+    SidechainWTJoinState wtWimble;
+    wtWimble.wtxid = GetRandHash();
+    wtWimble.nBlocksLeft = ValidSidechains[SIDECHAIN_WIMBLE].GetTau();
+    wtWimble.nSidechain = SIDECHAIN_WIMBLE;
+    wtWimble.nWorkScore = 0;
+
+    std::vector<SidechainWTJoinState> vWT;
+    vWT.push_back(wtTest);
+    vWT.push_back(wtHivemind);
+    vWT.push_back(wtWimble);
+
+    scdb.UpdateSCDBIndex(vWT);
 
     // Create a copy of the SCDB to manipulate
     SidechainDB scdbCopy = scdb;
 
     // Update the SCDB copy to get a new MT hash
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_TEST, 299, 1, hashWT1);
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_HIVEMIND, 299, 0, hashWT2);
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_WIMBLE, 299, 0, hashWT3);
+    wtTest.nBlocksLeft--;
+    wtTest.nWorkScore++;
+
+    wtHivemind.nBlocksLeft--;
+
+    wtWimble.nBlocksLeft--;
+
+    vWT.clear();
+    vWT.push_back(wtTest);
+    vWT.push_back(wtHivemind);
+    vWT.push_back(wtWimble);
+
+    scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
@@ -323,22 +411,100 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     scdb.Reset();
 
     // Add initial WT^s to SCDB
-    uint256 hashWT1 = GetRandHash();
-    uint256 hashWT2 = GetRandHash();
-    uint256 hashWT3 = GetRandHash();
-    scdb.UpdateSCDBIndex(SIDECHAIN_TEST, 300, 0, hashWT1);
-    scdb.UpdateSCDBIndex(SIDECHAIN_HIVEMIND, 300, 0, hashWT2);
-    scdb.UpdateSCDBIndex(SIDECHAIN_WIMBLE, 300, 0, hashWT3);
+    SidechainWTJoinState wtTest;
+    wtTest.wtxid = GetRandHash();
+    wtTest.nBlocksLeft = ValidSidechains[SIDECHAIN_TEST].GetTau();
+    wtTest.nSidechain = SIDECHAIN_TEST;
+    wtTest.nWorkScore = 0;
+
+    SidechainWTJoinState wtHivemind;
+    wtHivemind.wtxid = GetRandHash();
+    wtHivemind.nBlocksLeft = ValidSidechains[SIDECHAIN_HIVEMIND].GetTau();
+    wtHivemind.nSidechain = SIDECHAIN_HIVEMIND;
+    wtHivemind.nWorkScore = 0;
+
+    SidechainWTJoinState wtWimble;
+    wtWimble.wtxid = GetRandHash();
+    wtWimble.nBlocksLeft = ValidSidechains[SIDECHAIN_WIMBLE].GetTau();
+    wtWimble.nSidechain = SIDECHAIN_WIMBLE;
+    wtWimble.nWorkScore = 0;
+
+    std::vector<SidechainWTJoinState> vWT;
+    vWT.push_back(wtTest);
+    vWT.push_back(wtHivemind);
+    vWT.push_back(wtWimble);
+
+    scdb.UpdateSCDBIndex(vWT);
 
     // Create a copy of the SCDB to manipulate
     SidechainDB scdbCopy = scdb;
 
     // Update the SCDB copy to get a new MT hash
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_TEST, 299, 1, hashWT1);
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_HIVEMIND, 299, 0, hashWT2);
-    scdbCopy.UpdateSCDBIndex(SIDECHAIN_WIMBLE, 299, 1, hashWT3);
+    wtTest.nWorkScore++;
+    wtTest.nBlocksLeft--;
+
+    wtHivemind.nBlocksLeft--;
+
+    wtWimble.nWorkScore++;
+    wtWimble.nBlocksLeft--;
+
+    vWT.clear();
+    vWT.push_back(wtTest);
+    vWT.push_back(wtHivemind);
+    vWT.push_back(wtWimble);
+
+    scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
+    BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+}
+
+BOOST_AUTO_TEST_CASE(sidechaindb_MT_max)
+{
+    // Merkle tree based SCDB update test with multiple sidechains
+    // and multiple WT^(s) being updated. For each sidechain we will
+    // add as many WT^(s) as possible during a single tau period so
+    // that we can test updating SCDB in the worst case scenario of
+    // many WT^(s) being updated.
+    scdb.Reset();
+
+    // TODO currently adding 50 WT^s to each sidechain.
+    // Should add the maximum amount that could possibly
+    // confirm by the end of the verification period.
+
+    // Add 50 WT^(s) to each sidechain
+    for (int i = 0; i < 50; i++) {
+        std::vector<SidechainWTJoinState> vWT;
+
+        for (const Sidechain& s : ValidSidechains) {
+            SidechainWTJoinState wt;
+            wt.wtxid = GetRandHash();
+            wt.nBlocksLeft = s.GetTau() - i;
+            wt.nSidechain = s.nSidechain;
+            wt.nWorkScore = 0;
+
+            vWT.push_back(wt);
+        }
+
+        scdb.UpdateSCDBIndex(vWT);
+    }
+
+    // Make a copy of SCDB and update it
+    SidechainDB scdbCopy = scdb;
+    std::vector<SidechainWTJoinState> vWT;
+    for (const Sidechain& s : ValidSidechains) {
+        SidechainWTJoinState wt;
+        wt.wtxid = GetRandHash();
+        wt.nBlocksLeft = s.GetTau() - 51;
+        wt.nSidechain = s.nSidechain;
+        wt.nWorkScore = 0;
+
+        vWT.push_back(wt);
+    }
+
+    scdbCopy.UpdateSCDBIndex(vWT);
+
+    // Now try to synchronize main SCDB with copy
     BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
 }
 

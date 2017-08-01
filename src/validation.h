@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <list>
 #include <map>
 #include <set>
 #include <stdint.h>
@@ -543,13 +544,19 @@ bool VerifyTxOutProof(const std::string& strProof);
 /** GetSCDBHash with a specified SCDB instead of main instance */
 uint256 GetSCDBHash(const SidechainDB& scdbCopy);
 
-/** GetSCDBHash */
+/** Puts the data tracked by SCDB into a Merkle Tree and returns hashMerkleRoot */
 uint256 GetSCDBHash();
 
-/** GetHashIfUpdate */
+/** Return what the SCDB hash would be if the updates are applied */
 uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTJoinState>& vNewScores);
 
-/** UpdateMatchMT */
+/** Read the SCDB hash in a new block and try to synchronize our SCDB
+ *  by testing possible work score updates until the SCDB hash of our
+ *  SCDB matches that of the new block. Return false if no match found.
+ */
 bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot);
+
+/** Used by UpdateSCDBMatchMT() to generate all possible SCDB updates */
+void CartesianProduct(std::list<std::vector<SidechainWTJoinState>> input, std::list<std::vector<SidechainWTJoinState>>& product);
 
 #endif // BITCOIN_VALIDATION_H
