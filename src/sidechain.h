@@ -98,4 +98,6 @@ static const Sidechain ValidSidechains[] =
 
 bool SidechainNumberValid(uint8_t nSidechain);
 
+std::string GetSidechainName(uint8_t nSidechain);
+
 #endif // BITCOIN_SIDECHAIN_H

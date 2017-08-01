@@ -25,6 +25,14 @@ bool SidechainNumberValid(uint8_t nSidechain)
     }
 }
 
+std::string GetSidechainName(uint8_t nSidechain)
+{
+    if (!SidechainNumberValid(nSidechain))
+        return "SIDECHAIN_UNKNOWN";
+
+    return ValidSidechains[nSidechain].GetSidechainName();
+}
+
 std::string Sidechain::GetSidechainName() const
 {
     // Check that number corresponds to a valid sidechain
@@ -167,7 +175,7 @@ std::string Sidechain::ToString() const
 std::string SidechainDeposit::ToString() const
 {
     std::stringstream ss;
-    ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
+    ss << "nSidechain=" << GetSidechainName(nSidechain) << std::endl;
     ss << "keyID=" << keyID.ToString() << std::endl;
     ss << "txid=" << tx.GetHash().ToString() << std::endl;
     return ss.str();
@@ -177,7 +185,7 @@ std::string SidechainWTJoinState::ToString() const
 {
     std::stringstream ss;
     ss << "hash=" << GetHash().ToString() << std::endl;
-    ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
+    ss << "nSidechain=" << GetSidechainName(nSidechain) << std::endl;
     ss << "nBlocksLeft=" << (unsigned int)nBlocksLeft << std::endl;
     ss << "nWorkScore=" << (unsigned int)nWorkScore << std::endl;
     ss << "wtxid=" << wtxid.ToString() << std::endl;
