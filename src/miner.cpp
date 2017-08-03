@@ -452,8 +452,13 @@ CTransaction BlockAssembler::CreateSidechainDBHashTx()
 #ifdef ENABLE_WALLET
     if (scdb.HasState()) {
         CScript script;
-        // TODO custom format
-        script << OP_RETURN << ToByteVector(GetSCDBHash());
+        script << OP_RETURN;
+        script.push_back(0x44);
+        script.push_back(0x52);
+        script.push_back(0x56);
+        script.push_back(0x4D);
+        script.push_back(0x54);
+        script << ToByteVector(scdb.GetHash());
         mtx.vout.push_back(CTxOut(CENT, script));
     }
 #endif

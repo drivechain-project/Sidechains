@@ -658,7 +658,11 @@ public:
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
-    bool IsBribe() const;
+
+    /** Script formats for Drivechains */
+    bool IsBribeHashCommit() const;
+    bool IsMTHashCommit() const;
+    bool IsWTHashCommit() const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;
