@@ -1197,7 +1197,7 @@ bool CScriptCheck::operator()() {
     const CScriptWitness *witness = &ptxTo->vin[nIn].scriptWitness;
 
     std::multimap<uint256, int> mapBMMLDCopy;
-    if (scriptPubKey.IsBribe())
+    if (scriptPubKey.IsBribeHashCommit())
         mapBMMLDCopy = scdb.GetLinkingData();
 
     return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata, mapBMMLDCopy), &error);
@@ -1812,6 +1812,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
 
+    // Add deposits to SCDB deposit cache
     if (vDepositTx.size())
         scdb.AddDeposits(vDepositTx);
 

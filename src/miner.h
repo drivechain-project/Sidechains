@@ -208,8 +208,8 @@ private:
     // SidechainDB
     /** Returns a WT^ payout transaction for nSidechain if there is one */
     CTransaction CreateSidechainWTJoinTx(uint8_t nSidechain);
-    /** Returns a SCDB state update transaction (update script in output) */
-    CTransaction CreateSidechainStateTx();
+    /** Returns the SCDB hash encoded in an OP_RETURN output */
+    CTransaction CreateSidechainDBHashTx();
 };
 
 /** Modify the extranonce in a block */

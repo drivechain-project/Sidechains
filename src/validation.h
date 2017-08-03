@@ -44,6 +44,7 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 class SidechainDB;
+class SidechainWTJoinState;
 struct ChainTxData;
 
 struct PrecomputedTransactionData;

@@ -203,9 +203,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             pblock->vtx.push_back(MakeTransactionRef(std::move(wtx)));
     }
 
-    // Add SidechainDB state
-    CTransaction stateTx = CreateSidechainStateTx();
-    for (const CTxOut& out : stateTx.vout) {
+    // Add SidechainDB hash
+    CTransaction scdbTx = CreateSidechainDBHashTx();
+    for (const CTxOut& out : scdbTx.vout) {
         coinbaseTx.vout.push_back(out);
         nSideFees += out.nValue;
     }
@@ -445,13 +445,23 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
     return mtx;
 }
 
-CTransaction BlockAssembler::CreateSidechainStateTx()
+CTransaction BlockAssembler::CreateSidechainDBHashTx()
 {
     CMutableTransaction mtx;
 
-    CScript script = scdb.CreateStateScript(nHeight);
-    if (!script.empty())
+#ifdef ENABLE_WALLET
+    if (scdb.HasState()) {
+        CScript script;
+        script << OP_RETURN;
+        script.push_back(0x44);
+        script.push_back(0x52);
+        script.push_back(0x56);
+        script.push_back(0x4D);
+        script.push_back(0x54);
+        script << ToByteVector(scdb.GetHash());
         mtx.vout.push_back(CTxOut(CENT, script));
+    }
+#endif
 
     return mtx;
 }

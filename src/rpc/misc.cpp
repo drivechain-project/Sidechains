@@ -650,7 +650,7 @@ UniValue receivesidechainwtjoin(const JSONRPCRequest& request)
     if (!SidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
-    // Create CTransaction from hex
+    // Decode CTransaction from received hex
     CMutableTransaction mtx;
     std::string hex = request.params[1].get_str();
     DecodeHexTx(mtx, hex);
@@ -744,9 +744,10 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     for (const COutput& output : vSidechainCoins)
         amtSidechainUTXO += output.tx->tx->vout[output.i].nValue;
 
-    // TODO use BMM to calculate
+    // TODO Decide if we should seperate sidechain change
+    // and deposit payout to keyID here. Currently the sidechain
+    // is responsible for handling their own change.
     CAmount amtUserPayout = amtReturning;
-
 #endif
 
     UniValue ret(UniValue::VOBJ);
