@@ -353,7 +353,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
-    BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+    BOOST_CHECK(scdb.UpdateSCDBMatchMT(scdbCopy.GetHash()));
 
     // Reset SCDB after testing
     scdb.Reset();
@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
-    BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+    BOOST_CHECK(scdb.UpdateSCDBMatchMT(scdbCopy.GetHash()));
 
     // Reset SCDB after testing
     scdb.Reset();
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     scdbCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original SCDB
-    BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+    BOOST_CHECK(scdb.UpdateSCDBMatchMT(scdbCopy.GetHash()));
 
     // Reset SCDB after testing
     scdb.Reset();
@@ -521,7 +521,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_max)
     scdbCopy.UpdateSCDBIndex(vWT);
 
     // Now try to synchronize main SCDB with copy
-    BOOST_CHECK(UpdateSCDBMatchMT(GetSCDBHash(scdbCopy)));
+    BOOST_CHECK(scdb.UpdateSCDBMatchMT(scdbCopy.GetHash()));
 
     // Reset SCDB after testing
     scdb.Reset();
