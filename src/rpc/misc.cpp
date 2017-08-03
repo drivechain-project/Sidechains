@@ -650,7 +650,7 @@ UniValue receivesidechainwtjoin(const JSONRPCRequest& request)
     if (!SidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
-    // Create CTransaction from hex
+    // Decode CTransaction from received hex
     CMutableTransaction mtx;
     std::string hex = request.params[1].get_str();
     DecodeHexTx(mtx, hex);
