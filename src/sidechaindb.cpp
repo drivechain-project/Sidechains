@@ -4,6 +4,7 @@
 
 #include "sidechaindb.h"
 
+#include "consensus/merkle.h"
 #include "primitives/transaction.h"
 #include "script/script.h"
 #include "sidechain.h"
@@ -133,9 +134,30 @@ std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const
     return vSidechainDeposit;
 }
 
-uint256 SidechainDB::GetHashBlockLastSeen()
+uint256 SidechainDB::GetHash() const
+{
+    // TODO add LD data to the tree
+    std::vector<uint256> vLeaf;
+    for (const Sidechain& s : ValidSidechains) {
+        std::vector<SidechainWTJoinState> vState = GetState(s.nSidechain);
+        for (const SidechainWTJoinState& state : vState) {
+            vLeaf.push_back(state.GetHash());
+        }
+    }
+    return ComputeMerkleRoot(vLeaf);
+}
+
+uint256 SidechainDB::GetHashBlockLastSeen() const
 {
     return hashBlockLastSeen;
+}
+
+uint256 SidechainDB::GetHashIfUpdate(const std::vector<SidechainWTJoinState>& vNewScores) const
+{
+    SidechainDB scdbCopy = (*this);
+    scdbCopy.UpdateSCDBIndex(vNewScores);
+
+    return (scdbCopy.GetHash());
 }
 
 std::multimap<uint256, int> SidechainDB::GetLinkingData() const
@@ -394,4 +416,116 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewS
         }
     }
     return true;
+}
+
+bool SidechainDB::UpdateSCDBMatchMT(const uint256& hashMerkleRoot)
+{
+    // First see if we are already synchronized
+    if (GetHash() == hashMerkleRoot)
+        return true;
+
+    // TODO Try a few optimizations before generating all possible
+    // updates and testing them.
+
+    // Optimization 1: While there is only 1 sidechain, we only have
+    // to iterate through a single set of possible updates.
+
+    // Optimization 2: Upvote any WT^(s) which have reached the end
+    // of their wait period and test. We can assume that a WT^ that
+    // was added will want to be upvoted once it can be otherwise
+    // nobody would have spent the money to add it.
+
+    // Optimization 3: Upvote again the WT^(s) which were
+    // updated N blocks ago (t-1, t-2, t-3 etc)
+
+    // Now we must test every possible update. Note that this
+    // could be skipped if the updates are broadcast between
+    // nodes of the bitcoin network.
+
+    // Collect possible updates
+    std::list<std::vector<SidechainWTJoinState>> input;
+    for (const Sidechain& sidechain : ValidSidechains) {
+        // Generate possible new states for this sidechain
+        std::vector<SidechainWTJoinState> vPossible;
+        std::vector<SidechainWTJoinState> vState = GetState(sidechain.nSidechain);
+        for (const SidechainWTJoinState& state : vState) {
+            SidechainWTJoinState stateCopy = state;
+
+            // Decrement nBlocksLeft
+            if (stateCopy.nBlocksLeft > 0)
+                stateCopy.nBlocksLeft--;
+
+            // Add copy that abstains
+            vPossible.push_back(stateCopy);
+
+            // Add copy with +1 work score
+            SidechainWTJoinState stateCopyUpvote = stateCopy;
+            stateCopyUpvote.nWorkScore++;
+            vPossible.push_back(stateCopyUpvote);
+
+            // Add copy with -1 work score
+            SidechainWTJoinState stateCopyDownvote = stateCopy;
+            if (stateCopyDownvote.nWorkScore) {
+                stateCopyDownvote.nWorkScore--;
+                vPossible.push_back(stateCopyDownvote);
+            }
+        }
+        if (vPossible.size())
+            input.push_back(vPossible);
+    }
+
+    std::list<std::vector<SidechainWTJoinState>> output;
+    CartesianProduct(input, output);
+
+    for (const std::vector<SidechainWTJoinState>& vWT : output) {
+        if (GetHashIfUpdate(vWT) == hashMerkleRoot) {
+            UpdateSCDBIndex(vWT);
+            return (GetHash() == hashMerkleRoot);
+        }
+    }
+
+    return false;
+}
+
+void CartesianProduct(std::list<std::vector<SidechainWTJoinState>> input, std::list<std::vector<SidechainWTJoinState>>& product)
+{
+    if (input.empty())
+        return;
+
+    // Get the first vector of possible updates
+    const std::vector<SidechainWTJoinState>& vWT = input.front();
+
+    // We need a pair to find Cartesian product
+    if (vWT.size() < 2)
+        return;
+
+    // base case
+    if (++input.begin() == input.end()) {
+        for (const SidechainWTJoinState& wt : vWT)
+            product.push_back({wt});
+        return;
+    }
+
+    // Recurse
+    CartesianProduct(std::list<std::vector<SidechainWTJoinState>>(++input.begin(), input.end()), product);
+
+    // For each element in the first update vector, make a copy
+    // of the result and append the element to it.
+    std::list<std::vector<SidechainWTJoinState>> copies;
+    for (size_t x = 1; x < vWT.size(); x++) {
+        std::list<std::vector<SidechainWTJoinState>> copy = product;
+        for (auto& c : copy)
+            c.push_back(vWT[x]);
+        copies.splice(copies.end(), copy);
+    }
+
+    // Add first element of first update vector to the result
+    for (auto& out : product) {
+        out.push_back(vWT.front());
+    }
+
+    // Add the copies we created earlier to the result
+    product.splice(product.end(), copies);
+
+    return;
 }

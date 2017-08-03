@@ -7,6 +7,7 @@
 
 #include "uint256.h"
 
+#include <list>
 #include <map>
 #include <queue>
 #include <vector>
@@ -38,8 +39,14 @@ public:
     /** Return vector of deposits this tau for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
 
+    /** Puts the data tracked by SCDB into a Merkle Tree and returns hashMerkleRoot */
+    uint256 GetHash() const;
+
     /** Return the hash of the last block SCDB processed */
-    uint256 GetHashBlockLastSeen();
+    uint256 GetHashBlockLastSeen() const;
+
+    /** Return what the SCDB hash would be if the updates are applied */
+    uint256 GetHashIfUpdate(const std::vector<SidechainWTJoinState>& vNewScores) const;
 
     /**
      * Return from the BMM ratchet the data which is required to
@@ -78,6 +85,12 @@ public:
     /** Update / add multiple SCDB WT^(s) to SCDB */
     bool UpdateSCDBIndex(const std::vector<SidechainWTJoinState>& vNewScores);
 
+    /** Read the SCDB hash in a new block and try to synchronize our SCDB
+     *  by testing possible work score updates until the SCDB hash of our
+     *  SCDB matches that of the new block. Return false if no match found.
+     */
+    bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot);
+
 private:
     /** Sidechain "database" tracks verification status of WT^(s) */
     std::vector<SCDBIndex> SCDB;
@@ -101,6 +114,9 @@ private:
      */
     bool ApplyDefaultUpdate();
 };
+
+/** Used by UpdateSCDBMatchMT() to generate all possible SCDB updates */
+void CartesianProduct(std::list<std::vector<SidechainWTJoinState>> input, std::list<std::vector<SidechainWTJoinState>>& product);
 
 #endif // BITCOIN_SIDECHAINDB_H
 
