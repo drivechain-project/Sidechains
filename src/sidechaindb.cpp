@@ -273,7 +273,8 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
         if (nHeight > 0 && (nHeight % s.GetTau()) == 0)
             SCDB[s.nSidechain].ClearMembers();
     }
-    // TODO also clear out cached WT^(s) to save memory
+    // TODO clear out cached WT^(s) that belong to the Sidechain
+    // that was just reset.
 
     /*
      * Now we will look for data that is relevent to SCDB
@@ -291,12 +292,14 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
      * scanned this latest block.
      */
 
+    // TODO use CScript::IsBribeHashCommit() function once
+    // format is finalized.
     // Scan for h*(s)
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
         // Must at least contain the h*
-        if (scriptPubKey.size() < sizeof(uint256))
+        if (scriptPubKey.size() < 32)
             continue;
         if (!scriptPubKey.IsUnspendable())
             continue;
@@ -361,11 +364,74 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
     // Scan for new WT^(s) and start tracking them
     // TODO
     // SidechainDB::AddWTJoin
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        if (scriptPubKey.IsWTHashCommit()) {
+            // Get WT^ hash from script
+            CScript::const_iterator phash = scriptPubKey.begin() + 7;
+            opcodetype opcode;
+            std::vector<unsigned char> vchHash;
+            if (!scriptPubKey.GetOp(phash, opcode, vchHash))
+                continue;
+            if (vchHash.size() != 32)
+                continue;
+
+            uint256 hashWT = uint256(vchHash);
+
+            // Check sidechain number
+            CScript::const_iterator pnsidechain = scriptPubKey.begin() + 39;
+            std::vector<unsigned char> vchNS;
+            if (!scriptPubKey.GetOp(pnsidechain, opcode, vchNS))
+            if (vchNS.size() < 1 || vchNS.size() > 4)
+                continue;
+
+            CScriptNum nSidechain(vchNS, true);
+            if (!SidechainNumberValid(nSidechain.getint()))
+                continue;
+
+            // Create WT object
+            std::vector<SidechainWTJoinState> vWT;
+
+            SidechainWTJoinState wt;
+            wt.nSidechain = nSidechain.getint();
+            wt.nBlocksLeft = ValidSidechains[nSidechain.getint()].GetTau();
+            wt.nWorkScore = 0;
+            wt.wtxid = hashWT;
+
+            vWT.push_back(wt);
+
+            // Add to SCDB
+            bool fUpdated = UpdateSCDBIndex(vWT);
+            // TODO handle !fUpdated
+        }
+    }
 
     // Scan for updated SCDB MT hash and try to update
     // workscore of WT^(s)
     // Note: h*(s) and new WT^(s) must be added to SCDB
     // before this can be done.
+    // Note: Only one MT hash commit is allowed per coinbase
+    std::vector<CScript> vMTHashScript;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        if (scriptPubKey.IsMTHashCommit())
+            vMTHashScript.push_back(scriptPubKey);
+    }
+
+    if (vMTHashScript.size() == 1) {
+        const CScript& scriptPubKey = vMTHashScript.front();
+
+        // Get MT hash from script
+        CScript::const_iterator phash = scriptPubKey.begin() + 6;
+        opcodetype opcode;
+        std::vector<unsigned char> vch;
+        if (scriptPubKey.GetOp(phash, opcode, vch) && vch.size() == 32) {
+            // Try and sync
+            uint256 hashMerkleRoot = uint256(vch);
+            bool fUpdated = UpdateSCDBMatchMT(hashMerkleRoot);
+            // TODO handle !fUpdated
+        }
+    }
 
     // Update hashBLockLastSeen
     hashBlockLastSeen = hashBlock;
