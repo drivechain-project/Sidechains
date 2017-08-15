@@ -744,7 +744,8 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     for (const COutput& output : vSidechainCoins)
         amtSidechainUTXO += output.tx->tx->vout[output.i].nValue;
 
-    // TODO use BMM to calculate
+    // TODO Decide if the mainchain should calculate the user payout using BMM
+    // or if it should be the responsibility of the sidechain.
     CAmount amtUserPayout = amtReturning;
 
 #endif
