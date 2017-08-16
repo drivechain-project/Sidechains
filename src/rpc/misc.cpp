@@ -647,7 +647,7 @@ UniValue receivesidechainwtjoin(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     uint8_t nSidechain = request.params[0].get_int();
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
     // Create CTransaction from hex
@@ -685,7 +685,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     uint8_t nSidechain = std::stoi(request.params[0].getValStr());
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         throw std::runtime_error("Invalid sidechain number");
 
 #ifdef ENABLE_WALLET
@@ -845,8 +845,8 @@ UniValue createbribe(const JSONRPCRequest& request)
             "Bribe miners to include critical hash h* in coinbase output\n"
             "\nArguments:\n"
             "1. \"amount\"         (numeric or string, required) The amount in " + CURRENCY_UNIT + " to give miner. eg 0.1\n"
-            "2. \"height\"         (numeric, required) The sidechain block height the h* is a candidate for.\n"
             "3. \"criticalhash\"   (string, required) h* you want added to a coinbase\n"
+            "2. \"sidechain_id\"         (numeric, required) The sidechain that this critical hash is for.\n"
             "4. \"address\"        (string, required) bitcoin address to receive time locked refund\n"
             "\nExamples:\n"
             + HelpExampleCli("createbribe", "\"amount\", \"height\", \"criticalhash\", \"address\"")
@@ -858,7 +858,7 @@ UniValue createbribe(const JSONRPCRequest& request)
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
-    int nHeight = request.params[1].get_int();
+    int nSidechainId = request.params[1].get_int();
 
     // Critical hash
     uint256 hashCritical = uint256S(request.params[2].get_str());
@@ -872,7 +872,7 @@ UniValue createbribe(const JSONRPCRequest& request)
 
     // Create bribe script
     CScript scriptPubKey;
-    scriptPubKey << CScriptNum::serialize(nHeight) << ToByteVector(hashCritical) << OP_BRIBE
+    scriptPubKey << ToByteVector(hashCritical) << CScriptNum::serialize(nSidechainId) << OP_NOP4
                  << OP_NOTIF
                  << CScriptNum::serialize(300) << OP_CHECKLOCKTIMEVERIFY << OP_DROP
                  << OP_DUP << OP_HASH160 << ToByteVector(keyID) << OP_EQUALVERIFY << OP_CHECKSIG

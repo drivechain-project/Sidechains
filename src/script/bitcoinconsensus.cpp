@@ -78,7 +78,9 @@ static bool verify_flags(unsigned int flags)
 
 static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, CAmount amount,
                                     const unsigned char *txTo        , unsigned int txToLen,
-                                    unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err)
+                                    unsigned int nIn, 
+				    const unsigned char *coinbaseTxIn, unsigned int coinbaseTxInLen, 
+				    unsigned int flags, bitcoinconsensus_error* err)
 {
     if (!verify_flags(flags)) {
         return bitcoinconsensus_ERR_INVALID_FLAGS;
@@ -93,9 +95,12 @@ static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptP
 
         // Regardless of the verification result, the tx did not error.
         set_error(err, bitcoinconsensus_ERR_OK);
-
+        TxInputStream stream2(SER_NETWORK,PROTOCOL_VERSION, coinbaseTxIn, coinbaseTxInLen);
+        CTransaction coinbaseTx(deserialize,stream2); 
+        const CTransactionRef& coinbaseTxRef = MakeTransactionRef(coinbaseTx);
         PrecomputedTransactionData txdata(tx);
-        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), &tx.vin[nIn].scriptWitness, flags, TransactionSignatureChecker(&tx, nIn, amount, txdata), NULL);
+        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), &tx.vin[nIn].scriptWitness, flags, 
+	    TransactionSignatureChecker(&tx, nIn, amount, coinbaseTxRef, txdata), NULL);
     } catch (const std::exception&) {
         return set_error(err, bitcoinconsensus_ERR_TX_DESERIALIZE); // Error deserializing
     }
@@ -103,23 +108,27 @@ static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptP
 
 int bitcoinconsensus_verify_script_with_amount(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, int64_t amount,
                                     const unsigned char *txTo        , unsigned int txToLen,
-                                    unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err)
+                                    unsigned int nIn, 
+				    const unsigned char *coinbaseTxIn, unsigned int coinbaseTxInLen, 
+				    unsigned int flags, bitcoinconsensus_error* err)
 {
     CAmount am(amount);
-    return ::verify_script(scriptPubKey, scriptPubKeyLen, am, txTo, txToLen, nIn, flags, err);
+    return ::verify_script(scriptPubKey, scriptPubKeyLen, am, txTo, txToLen, nIn, coinbaseTxIn, coinbaseTxInLen, flags, err);
 }
 
 
 int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
                                    const unsigned char *txTo        , unsigned int txToLen,
-                                   unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err)
+                                   unsigned int nIn, 
+				   const unsigned char *coinbaseTxIn, unsigned int coinbaseTxInLen, 
+				   unsigned int flags, bitcoinconsensus_error* err)
 {
     if (flags & bitcoinconsensus_SCRIPT_FLAGS_VERIFY_WITNESS) {
         return set_error(err, bitcoinconsensus_ERR_AMOUNT_REQUIRED);
     }
 
     CAmount am(0);
-    return ::verify_script(scriptPubKey, scriptPubKeyLen, am, txTo, txToLen, nIn, flags, err);
+    return ::verify_script(scriptPubKey, scriptPubKeyLen, am, txTo, txToLen, nIn, coinbaseTxIn, coinbaseTxInLen, flags, err);
 }
 
 unsigned int bitcoinconsensus_version()

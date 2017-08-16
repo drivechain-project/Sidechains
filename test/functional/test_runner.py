@@ -100,6 +100,7 @@ BASE_SCRIPTS= [
     'p2p-mempool.py',
     'prioritise_transaction.py',
     'invalidblockrequest.py',
+    'p2p-invalid-drivechain-commitment.py',
     'invalidtxrequest.py',
     'p2p-versionbits-warning.py',
     'preciousblock.py',

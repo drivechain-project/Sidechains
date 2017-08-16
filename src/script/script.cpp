@@ -5,6 +5,7 @@
 
 #include "script.h"
 
+#include "sidechain.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
@@ -131,7 +132,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
-    case OP_BRIBE                  : return "OP_BRIBE";
+    case OP_NOP4		   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
@@ -251,26 +252,59 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
+bool CScript::IsBribeCommitment(uint8_t& nSidechainId, std::vector<unsigned char>& commitment) const {
+    //assuming format: OP_RETURN <pushop> <hash> <pushop?> <sidechainid>
+    size_t size = this->size();
+    if (size != 35 && size != 36) {
+        return false;
+    }
+    if ((*this)[0] != OP_RETURN) {
+        return false;
+    }
+    if ((*this)[1] != 0x20) {
+        return false;
+    }
+    std::vector<unsigned char> vec;
+    unsigned char ch = (*this)[size-1];
+    if (ch >= OP_1 && ch <= OP_16) {
+        CScriptNum bn((int)ch - (int)(OP_1 - 1));
+        vec = bn.getvch();
+    } else if (ch == 0) {
+        //OP_0 is represented as the empty vector, so push nothing on to vec
+    } else {
+        vec.push_back(ch);
+    }
+    CScriptNum num(vec,true);
+    bool isValidId = CheckSidechainId(num,nSidechainId);
+    if (!isValidId) {
+        return false;
+    }
+    commitment = std::vector<unsigned char>(this->begin() + 2, this->begin() + 2 + 32);
+    return true;
+}
+
 bool CScript::IsBribe() const
 {
-    // TODO
-    // Size must be at least:
-    // sizeof(uint256) to include h*
-    // +
-    // sizeof(uint160) for keyID
-    // +
-    // opcode count
-    //
+    //assuming format is: <pushop> <hash> <pushop?> <sidechainid> OP_NOP4
     size_t size = this->size();
-    if (size < 32 )
+    if (size != 35 || size != 36) {
         return false;
-
+    }
+    if ((*this)[0] != 0x20) {
+        return false;
+    }
+    if (!IsSidechainNumberValid((*this)[size - 2])) {
+        return false;
+    }
+    if ((*this)[size-1] != OP_NOP4) {
+        return false;
+    }
     // TODO
     // The format of a bribe script is currently being discussed on the
     // bitcoin-dev mailing list. For now we are just checking if the script
-    // is large enough to contain an h* and contains an OP_BRIBE op.
+    // is large enough to contain an h* and contains an OP_BRIBEVERIFY op.
 
-    return (this->Find(OP_BRIBE));
+    return true;
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const

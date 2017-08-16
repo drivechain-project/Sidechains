@@ -43,6 +43,7 @@
 #include "warnings.h"
 
 #include <atomic>
+#include <algorithm>
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -1199,8 +1200,8 @@ bool CScriptCheck::operator()() {
     std::multimap<uint256, int> mapBMMLDCopy;
     if (scriptPubKey.IsBribe())
         mapBMMLDCopy = scdb.GetLinkingData();
-
-    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata, mapBMMLDCopy), &error);
+    const CTransactionRef& coinbaseTx = chainActive.Tip()->coinbase;
+    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, coinbaseTx, cacheStore, *txdata, mapBMMLDCopy), &error);
 }
 
 int GetSpendHeight(const CCoinsViewCache& inputs)
@@ -1665,7 +1666,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     // TODO
     // Activate BRIBE right now for testing
     if (true) {
-        flags |= SCRIPT_VERIFY_BRIBE;
+        flags |= SCRIPT_VERIFY_BRIBEVERIFY;
     }
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
@@ -2775,6 +2776,20 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // First transaction must be coinbase, the rest must not be
     if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
         return state.DoS(100, false, REJECT_INVALID, "bad-cb-missing", false, "first tx is not coinbase");
+    //coinbase tx can only have 1 drivechain commitment per chain
+    const CTransactionRef& coinbaseTx = block.vtx[0];
+    std::vector<uint8_t> commitments;
+    for (unsigned int i = 0; i < (*coinbaseTx).vout.size(); i++) {
+        const CScript& spk = (*coinbaseTx).vout[i].scriptPubKey;
+        uint8_t nSidechainId;
+        std::vector<unsigned char> commitment;
+        if (spk.IsBribeCommitment(nSidechainId,commitment)) {
+	    if ((std::find(commitments.begin(), commitments.end(), nSidechainId) != commitments.end())) {
+	        return state.DoS(100, false, REJECT_INVALID, "bad-chain-commitment", "We had multiple commitments for one drivechain");
+	    }
+	    commitments.push_back(nSidechainId);
+	} 
+    }
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i]->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");

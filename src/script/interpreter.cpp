@@ -424,9 +424,10 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     break;
                 }
 
-                case OP_BRIBE:
+                case OP_NOP4:
                 {
-                    if (!(flags & SCRIPT_VERIFY_BRIBE)) {
+                    //format: critical_hash sidechain_id OP_BRIBEVERIFY 
+		    if (!(flags & SCRIPT_VERIFY_BRIBEVERIFY)) {
                         // not enabled; treat as a NOP4
                         if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS) {
                             return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS);
@@ -434,18 +435,20 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         break;
                     }
 
-                    if (stack.size() < 1)
+                    if (stack.size() < 2)
                         return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
-
-                    // Check h*
-                    bool fHashCritical = checker.CheckCriticalHash(stacktop(-1));
-
-                    // Pop h* from the stack
-                    popstack(stack);
-
-                    // Push result to the stack
-                    stack.push_back(fHashCritical ? vchTrue : vchFalse);
-
+		    
+		    const CScriptNum scriptNumSidechainId(stacktop(-1),fRequireMinimal);
+		    uint8_t nSidechainId;  
+		    if (!CheckSidechainId(scriptNumSidechainId,nSidechainId)) {
+		   	return set_error(serror, SCRIPT_ERR_UNKNOWN_SIDECHAIN); 
+		    }
+                    
+		    // Check h*
+		    bool fHashCritical = checker.CheckCriticalHash(stacktop(-2),nSidechainId);
+		    if (!fHashCritical) {
+		   	return set_error(serror, SCRIPT_ERR_UNSATISFIED_BRIBE); 
+		    }
                     break;
                 }
 
@@ -1374,6 +1377,21 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
         return false;
 
     return true;
+}
+bool TransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const
+{
+    const std::vector<CTxOut>& outputs = (*coinbaseTx).vout;
+    for (unsigned int i = 0; i < outputs.size(); i++) { 
+        
+	const CScript& spk = outputs[i].scriptPubKey;
+        //TODO: Probably shouldn't initialize this to 0, as this can be a valid drivechain id
+	uint8_t id;
+	std::vector<unsigned char> headerCommitment;
+        if (spk.IsBribeCommitment(id,headerCommitment) && headerCommitment == vchHash && nSidechainId == id) {
+	    return true;
+        }
+    }
+    return false;
 }
 
 static bool VerifyWitnessProgram(const CScriptWitness& witness, int witversion, const std::vector<unsigned char>& program, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)

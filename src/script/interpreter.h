@@ -7,8 +7,8 @@
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
 #include "script_error.h"
+#include "sidechain.h"
 #include "primitives/transaction.h"
-
 #include <vector>
 #include <stdint.h>
 #include <string>
@@ -109,7 +109,7 @@ enum
 
     // Support OP_BRIBE for BMM
     //
-    SCRIPT_VERIFY_BRIBE = (1U << 16),
+    SCRIPT_VERIFY_BRIBEVERIFY = (1U << 16),
 };
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);
@@ -147,7 +147,7 @@ public:
          return false;
     }
 
-    virtual bool CheckCriticalHash(const std::vector<unsigned char>& vchHash) const
+    virtual bool CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const
     {
          return false;
     }
@@ -161,17 +161,18 @@ private:
     const CTransaction* txTo;
     unsigned int nIn;
     const CAmount amount;
+    const CTransactionRef& coinbaseTx;
     const PrecomputedTransactionData* txdata;
-
 protected:
     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
 
 public:
-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(NULL) {}
-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const PrecomputedTransactionData& txdataIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(&txdataIn) {}
+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CTransactionRef& coinbaseTxIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), coinbaseTx(coinbaseTxIn), txdata(NULL) {}
+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CTransactionRef& coinbaseTxIn, const PrecomputedTransactionData& txdataIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), coinbaseTx(coinbaseTxIn), txdata(&txdataIn) {}
     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const;
     bool CheckLockTime(const CScriptNum& nLockTime) const;
     bool CheckSequence(const CScriptNum& nSequence) const;
+    bool CheckCriticalHash(const std::vector<unsigned char>& vchHash, const uint8_t& nSidechainId) const;
 };
 
 class MutableTransactionSignatureChecker : public TransactionSignatureChecker
@@ -180,7 +181,7 @@ private:
     const CTransaction txTo;
 
 public:
-    MutableTransactionSignatureChecker(const CMutableTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : TransactionSignatureChecker(&txTo, nInIn, amountIn), txTo(*txToIn) {}
+    MutableTransactionSignatureChecker(const CMutableTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CTransactionRef& coinbaseTxIn) : TransactionSignatureChecker(&txTo, nInIn, amountIn, coinbaseTxIn), txTo(*txToIn) {}
 };
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptError* error = NULL);

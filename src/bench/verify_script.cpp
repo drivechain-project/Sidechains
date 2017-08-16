@@ -66,6 +66,7 @@ static void VerifyScriptBench(benchmark::State& state)
     CScript scriptSig;
     CScript witScriptPubkey = CScript() << OP_DUP << OP_HASH160 << ToByteVector(pubkeyHash) << OP_EQUALVERIFY << OP_CHECKSIG;
     CTransaction txCredit = BuildCreditingTransaction(scriptPubKey);
+    const CTransactionRef& coinbaseTx = MakeTransactionRef(txCredit);
     CMutableTransaction txSpend = BuildSpendingTransaction(scriptSig, txCredit);
     CScriptWitness& witness = txSpend.vin[0].scriptWitness;
     witness.stack.emplace_back();
@@ -81,7 +82,7 @@ static void VerifyScriptBench(benchmark::State& state)
             txCredit.vout[0].scriptPubKey,
             &txSpend.vin[0].scriptWitness,
             flags,
-            MutableTransactionSignatureChecker(&txSpend, 0, txCredit.vout[0].nValue),
+            MutableTransactionSignatureChecker(&txSpend, 0, txCredit.vout[0].nValue, coinbaseTx),
             &err);
         assert(err == SCRIPT_ERR_OK);
         assert(success);
@@ -89,11 +90,13 @@ static void VerifyScriptBench(benchmark::State& state)
 #if defined(HAVE_CONSENSUS_LIB)
         CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
         stream << txSpend;
+        CDataStream stream2(SER_NETWORK, PROTOCOL_VERSION);
+        stream2 << coinbaseTx;
         int csuccess = bitcoinconsensus_verify_script_with_amount(
             txCredit.vout[0].scriptPubKey.data(),
             txCredit.vout[0].scriptPubKey.size(),
             txCredit.vout[0].nValue,
-            (const unsigned char*)stream.data(), stream.size(), 0, flags, nullptr);
+            (const unsigned char*)stream.data(), stream.size(), 0, (const unsigned char *)stream2.data(), stream2.size(), flags, nullptr);
         assert(csuccess == 1);
 #endif
     }

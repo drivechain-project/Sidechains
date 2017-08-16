@@ -134,7 +134,7 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, const std::vector<CTxOut>& drivechainCommitments, bool fMineWitnessTx)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -190,9 +190,13 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     CMutableTransaction coinbaseTx;
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
-    coinbaseTx.vout.resize(1);
+    coinbaseTx.vout.resize(1 + drivechainCommitments.size());
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-
+    
+    //add drivechain commitments to coinbase output vector
+    for (unsigned int i = 1; i < drivechainCommitments.size(); i++) {
+        coinbaseTx.vout[i] = drivechainCommitments[i-1];
+    }
     // Track sidechain state tx fees
     CAmount nSideFees = 0;
 
@@ -342,7 +346,7 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
 #ifdef ENABLE_WALLET
     if (!scdb.HasState())
         return mtx;
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return mtx;
 
     const Sidechain& sidechain = ValidSidechains[nSidechain];
@@ -433,7 +437,8 @@ CTransaction BlockAssembler::CreateSidechainWTJoinTx(uint8_t nSidechain)
 
     // Sign WT^ SCUTXO input
     const CTransaction& txToSign = mtx;
-    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT);
+    const CTransactionRef coinbaseTx = chainActive.Tip()->coinbase;
+    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT, coinbaseTx);
     SignatureData sigdata;
     bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
     if (!sigCreated)

@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-bool SidechainNumberValid(uint8_t nSidechain)
+bool IsSidechainNumberValid(const uint8_t& nSidechain)
 {
     if (!(nSidechain < ARRAYLEN(ValidSidechains)))
         return false;
@@ -21,6 +21,17 @@ bool SidechainNumberValid(uint8_t nSidechain)
     default:
         return false;
     }
+}
+
+bool CheckSidechainId(const CScriptNum& id, uint8_t& nSidechainId)
+{
+    if (id > CScriptNum(255) || id < CScriptNum(0)) {
+        return false;
+    }
+    //TODO: Look at this closer, is this safe??
+    nSidechainId = static_cast<uint8_t>(id.getint());
+    bool result = IsSidechainNumberValid(nSidechainId);
+    return result;
 }
 
 std::string Sidechain::GetSidechainName() const

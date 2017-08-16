@@ -2339,8 +2339,9 @@ bool CWallet::SignTransaction(CMutableTransaction &tx)
         }
         const CScript& scriptPubKey = mi->second.tx->vout[input.prevout.n].scriptPubKey;
         const CAmount& amount = mi->second.tx->vout[input.prevout.n].nValue;
+	const CTransactionRef& coinbaseTx = chainActive.Tip()->coinbase;
         SignatureData sigdata;
-        if (!ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, amount, SIGHASH_ALL), scriptPubKey, sigdata)) {
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, amount, coinbaseTx, SIGHASH_ALL), scriptPubKey, sigdata)) {
             return false;
         }
         UpdateTransaction(tx, nIn, sigdata);
@@ -2432,7 +2433,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);
     CMutableTransaction txNew;
-
+    const CTransactionRef& coinbaseTx = chainActive.Tip()->coinbase;
     // Discourage fee sniping.
     //
     // For a large miner the value of the transactions in the best block and
@@ -2712,7 +2713,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 const CScript& scriptPubKey = coin.txout.scriptPubKey;
                 SignatureData sigdata;
 
-                if (!ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, coin.txout.nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+                if (!ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, coin.txout.nValue, coinbaseTx, SIGHASH_ALL), scriptPubKey, sigdata))
                 {
                     strFailReason = _("Signing transaction failed");
                     return false;
@@ -2756,7 +2757,8 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
 bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const uint8_t& nSidechain, const CAmount& nAmount, const CKeyID& keyID)
 {
     LOCK2(cs_main, pwalletMain->cs_wallet);
-
+    
+    const CTransactionRef& coinbaseTx = chainActive.Tip()->coinbase;
     // User deposit data script
     CScript dataScript = CScript() << OP_RETURN << nSidechain << ToByteVector(keyID);
 
@@ -2839,8 +2841,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
 
         const CKeyStore& keystoreConst = tempKeystore;
         const CTransaction& txToSign = mtx;
-
-        TransactionSignatureCreator creator(&keystoreConst, &txToSign, mtx.vin.size() - 1, returnAmount);
+        TransactionSignatureCreator creator(&keystoreConst, &txToSign, mtx.vin.size() - 1, returnAmount, coinbaseTx);
 
         SignatureData sigdata;
         bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
@@ -2859,7 +2860,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
         const CScript& scriptPubKey = coin.txout.scriptPubKey;
         SignatureData sigdata;
 
-        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, coin.txout.nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, coin.txout.nValue, coinbaseTx, SIGHASH_ALL), scriptPubKey, sigdata))
         {
             strFail = "Signing non-sidechain inputs failed!\n";
             return false;
