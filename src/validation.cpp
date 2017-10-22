@@ -1196,11 +1196,7 @@ bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     const CScriptWitness *witness = &ptxTo->vin[nIn].scriptWitness;
 
-    std::multimap<uint256, int> mapBMMLDCopy;
-    if (scriptPubKey.IsCriticalHashCommit())
-        mapBMMLDCopy = scdb.GetLinkingData();
-
-    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata, mapBMMLDCopy), &error);
+    return VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata), &error);
 }
 
 int GetSpendHeight(const CCoinsViewCache& inputs)
@@ -1660,12 +1656,6 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     if (IsWitnessEnabled(pindex->pprev, chainparams.GetConsensus())) {
         flags |= SCRIPT_VERIFY_WITNESS;
         flags |= SCRIPT_VERIFY_NULLDUMMY;
-    }
-
-    // TODO
-    // Activate BRIBE right now for testing
-    if (true) {
-        flags |= SCRIPT_VERIFY_BRIBE;
     }
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;

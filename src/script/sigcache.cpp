@@ -92,20 +92,3 @@ bool CachingTransactionSignatureChecker::VerifySignature(const std::vector<unsig
         signatureCache.Set(entry);
     return true;
 }
-
-bool CachingTransactionSignatureChecker::CheckCriticalHash(const std::vector<unsigned char>& vchHash) const
-{
-    if (vchHash.size() != 32)
-        return false;
-
-    uint256 hashCritical(vchHash);
-    if (hashCritical.IsNull())
-        return false;
-
-    // Lookup critical hash (h*)
-    std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical);
-    if (it == mapLD.end())
-        return false;
-
-    return true;
-}

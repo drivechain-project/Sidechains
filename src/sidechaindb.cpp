@@ -11,9 +11,12 @@
 #include "uint256.h"
 #include "utilstrencodings.h"
 
+#include <iostream>
 SidechainDB::SidechainDB()
 {
-    SCDB.resize(ARRAYLEN(ValidSidechains));
+    size_t nSidechains = ARRAYLEN(ValidSidechains);
+    SCDB.resize(nSidechains );
+    ratchet.resize(nSidechains);
 }
 
 void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx)
@@ -71,7 +74,7 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const CTransaction& tx)
 {
     if (vWTPrimeCache.size() >= SIDECHAIN_MAX_WT)
         return false;
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return false;
     if (HaveWTPrimeCached(tx.GetHash()))
         return false;
@@ -148,9 +151,17 @@ uint256 SidechainDB::GetHashIfUpdate(const std::vector<SidechainWTPrimeState>& v
     return (scdbCopy.GetHash());
 }
 
-std::multimap<uint256, int> SidechainDB::GetLinkingData() const
+bool SidechainDB::GetLinkingData(uint8_t nSidechain, std::vector<SidechainLD>& ld) const
 {
-    return mapBMMLD;
+    if (!IsSidechainNumberValid(nSidechain))
+        return false;
+
+    if (nSidechain >= ratchet.size())
+        return false;
+
+    ld = ratchet[nSidechain];
+
+    return true;
 }
 
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
@@ -199,6 +210,18 @@ bool SidechainDB::HaveDepositCached(const SidechainDeposit &deposit) const
     return false;
 }
 
+bool SidechainDB::HaveLinkingData(uint8_t nSidechain, uint256 hashCritical) const
+{
+    if (!IsSidechainNumberValid(nSidechain))
+        return false;
+
+    for (const SidechainLD& ld : ratchet[nSidechain]) {
+        if (ld.hashCritical == hashCritical)
+            return true;
+    }
+    return false;
+}
+
 bool SidechainDB::HaveWTPrimeCached(const uint256& hashWTPrime) const
 {
     for (const CTransaction& tx : vWTPrimeCache) {
@@ -215,9 +238,10 @@ void SidechainDB::Reset()
         SCDB[s.nSidechain].ClearMembers();
 
     // Clear out LD
-    mapBMMLD.clear();
-    std::queue<uint256> queueEmpty;
-    std::swap(queueBMMLD, queueEmpty);
+    ratchet.clear();
+    //mapBMMLD.clear();
+    //std::queue<uint256> queueEmpty;
+    //std::swap(queueBMMLD, queueEmpty);
 
     // Clear out Deposit data
     vDepositCache.clear();
@@ -286,26 +310,70 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
         if (!scriptPubKey.IsCriticalHashCommit())
             continue;
 
-        /* TODO refactor along with DAG PR
-        CScript::const_iterator pbn = scriptPubKey.begin() + 1;
+        std::cout << "scdb scan h* [0]\n";
+
+        CScript::const_iterator phash = scriptPubKey.begin() + 5;
         opcodetype opcode;
-        std::vector<unsigned char> vchBN;
-        if (!scriptPubKey.GetOp(pbn, opcode, vchBN))
+        std::vector<unsigned char> vchHash;
+        if (!scriptPubKey.GetOp(phash, opcode, vchHash))
             continue;
-        if (vchBN.size() < 1 || vchBN.size() > 4)
+        std::cout << "scdb scan h* [1] " << vchHash.size() << "\n";
+        if (vchHash.size() != sizeof(uint256))
             continue;
+        std::cout << "scdb scan h* [2]\n";
 
-        CScriptNum nBlock(vchBN, true);
+        uint256 hashCritical = uint256(vchHash);
 
-        CScript::const_iterator phash = scriptPubKey.begin() + vchBN.size() + 2;
-        std::vector<unsigned char> vch;
-        if (!scriptPubKey.GetOp(phash, opcode, vch))
-            continue;
-        if (vch.size() != sizeof(uint256))
-            continue;
 
-        uint256 hashCritical = uint256(vch);
+        // Read critical data bytes if there are any
+        std::vector<unsigned char> bytes;
+        if (scriptPubKey.size() > 37) {
+            std::cout << "scdb scan h* [3]\n";
+            CScript::const_iterator pbytes = scriptPubKey.begin() + 38;
+            if (!scriptPubKey.GetOp(pbytes, opcode, bytes))
+                continue;
+            std::cout << "scdb scan h* [4] " << bytes.size() << "\n";
 
+            // Do the bytes indicate that this is a sidechain h*?
+            if (bytes[0] != 0x00 || bytes[1] != 0xbf || bytes[2] != 0x00)
+                continue;
+
+            std::cout << "scdb scan h* [5]\n";
+
+            // Read sidechain number
+            CScript::const_iterator psidechain = scriptPubKey.begin() + 42;
+            std::vector<unsigned char> vchSidechain;
+            if (!scriptPubKey.GetOp(psidechain, opcode, vchSidechain))
+                continue;
+
+            CScriptNum nSidechain(vchSidechain, true);
+            std::cout << "nSidechain: " << nSidechain.getint() << std::endl;
+
+            if (!IsSidechainNumberValid(nSidechain.getint()))
+                continue;
+
+            std::cout << "scdb scan h* [6]\n";
+
+            // Read dag number
+            CScript::const_iterator pdag = psidechain + vchSidechain.size();
+            std::vector<unsigned char> vchDAG;
+            if (!scriptPubKey.GetOp(pdag, opcode, vchDAG))
+                continue;
+
+            CScriptNum nDAG(vchDAG, true);
+            std::cout << "nDAG: " << nDAG.getint() << std::endl;
+            std::cout << "scdb scan h* [7]\n";
+
+
+            SidechainLD ld;
+            ld.nSidechain = SIDECHAIN_TEST;
+            ld.hashCritical = hashCritical;
+            ld.nDAG = 0;
+
+            ratchet[SIDECHAIN_TEST].push_back(ld);
+        }
+
+/*
         // Check block number
         bool fValid = false;
         if (queueBMMLD.size()) {

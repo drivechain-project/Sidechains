@@ -48,12 +48,8 @@ private:
     std::multimap<uint256, int> mapLD;
 
 public:
-    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, bool storeIn, PrecomputedTransactionData& txdataIn, const std::multimap<uint256, int>& mapBMMLDCopy) : TransactionSignatureChecker(txToIn, nInIn, amountIn, txdataIn), store(storeIn)
-    {
-        mapLD = mapBMMLDCopy;
-    }
+    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, bool storeIn, PrecomputedTransactionData& txdataIn) : TransactionSignatureChecker(txToIn, nInIn, amountIn, txdataIn), store(storeIn) {};
     bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
-    bool CheckCriticalHash(const std::vector<unsigned char>& vchHash) const;
 };
 
 void InitSignatureCache();
