@@ -31,7 +31,7 @@ void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx)
                 continue;
 
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-            if (!SidechainNumberValid(nSidechain))
+            if (!IsSidechainNumberValid(nSidechain))
                 continue;
 
             CScript::const_iterator pkey = scriptPubKey.begin() + 2;
@@ -97,7 +97,7 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const CTransaction& tx)
 
 bool SidechainDB::CheckWorkScore(const uint8_t& nSidechain, const uint256& hashWTPrime) const
 {
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return false;
 
     std::vector<SidechainWTPrimeState> vState = GetState(nSidechain);
@@ -155,7 +155,7 @@ std::multimap<uint256, int> SidechainDB::GetLinkingData() const
 
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
 {
-    if (!HasState() || !SidechainNumberValid(nSidechain))
+    if (!HasState() || !IsSidechainNumberValid(nSidechain))
         return std::vector<SidechainWTPrimeState>();
 
     std::vector<SidechainWTPrimeState> vState;
@@ -370,7 +370,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
                 continue;
 
             CScriptNum nSidechain(vchNS, true);
-            if (!SidechainNumberValid(nSidechain.getint()))
+            if (!IsSidechainNumberValid(nSidechain.getint()))
                 continue;
 
             // Create WT object
@@ -427,7 +427,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
 {
     // First check that sidechain numbers are valid
     for (const SidechainWTPrimeState& s : vNewScores) {
-        if (!SidechainNumberValid(s.nSidechain))
+        if (!IsSidechainNumberValid(s.nSidechain))
             return false;
     }
 
@@ -494,7 +494,7 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot)
         std::vector<SidechainWTPrimeState> vWT;
         for (const SidechainUpdateMSG& msg : update.vUpdate) {
             // Is sidechain number valid?
-            if (!SidechainNumberValid(msg.nSidechain))
+            if (!IsSidechainNumberValid(msg.nSidechain))
                  return false;
 
             SidechainWTPrimeState wt;

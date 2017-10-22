@@ -108,7 +108,7 @@ static const Sidechain ValidSidechains[] =
     {SIDECHAIN_WIMBLE, 100, 200, 100},
 };
 
-bool SidechainNumberValid(uint8_t nSidechain);
+bool IsSidechainNumberValid(uint8_t nSidechain);
 
 std::string GetSidechainName(uint8_t nSidechain);
 

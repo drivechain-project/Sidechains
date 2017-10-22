@@ -11,7 +11,7 @@
 
 std::string GetSidechainName(uint8_t nSidechain)
 {
-    if (!SidechainNumberValid(nSidechain))
+    if (!IsSidechainNumberValid(nSidechain))
         return "SIDECHAIN_UNKNOWN";
 
     return ValidSidechains[nSidechain].GetSidechainName();
@@ -176,7 +176,7 @@ bool SCDBIndex::GetMember(uint256 hashWT, SidechainWTPrimeState& wt) const
     return false;
 }
 
-bool SidechainNumberValid(uint8_t nSidechain)
+bool IsSidechainNumberValid(uint8_t nSidechain)
 {
     if (!(nSidechain < ARRAYLEN(ValidSidechains)))
         return false;
