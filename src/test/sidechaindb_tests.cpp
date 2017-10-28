@@ -186,7 +186,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     msg.nSidechain = SIDECHAIN_TEST;
     msg.hashWTPrime = wt.hashWTPrime;
     msg.nWorkScore = 1;
-    msg.nHeight = 1;
 
     SidechainUpdatePackage updatePackage;
     updatePackage.nHeight = 1;
@@ -254,7 +253,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     msgTest.nSidechain = SIDECHAIN_TEST;
     msgTest.hashWTPrime = wtTest.hashWTPrime;
     msgTest.nWorkScore = 1;
-    msgTest.nHeight = 1;
 
     SidechainUpdatePackage updatePackage;
     updatePackage.nHeight = 1;
@@ -323,13 +321,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     msgTest.nSidechain = SIDECHAIN_TEST;
     msgTest.hashWTPrime = wtTest.hashWTPrime;
     msgTest.nWorkScore = 1;
-    msgTest.nHeight = 1;
 
     SidechainUpdateMSG msgWimble;
     msgWimble.nSidechain = SIDECHAIN_WIMBLE;
     msgWimble.hashWTPrime = wtWimble.hashWTPrime;
     msgWimble.nWorkScore = 1;
-    msgWimble.nHeight = 1;
 
     SidechainUpdatePackage updatePackage;
     updatePackage.nHeight = 1;

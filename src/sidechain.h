@@ -22,7 +22,9 @@ static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b
 //! Max number of WT^(s) per sidechain during tau
 static const int SIDECHAIN_MAX_WT = 3;
 
-static const int SIDECHAIN_MAX_LD = 2600;
+static const int SIDECHAIN_MAX_LD = 4000;
+static const int BMM_MAX_DAG = 200;
+static const int CRITICAL_DATA_MATURITY = 200;
 
 enum SidechainNumber {
     SIDECHAIN_TEST = 0,
@@ -53,11 +55,18 @@ struct SidechainDeposit {
     std::string ToString() const;
 };
 
+struct SidechainLD {
+    int8_t nSidechain;
+    int8_t nPrevBlockRef;
+    uint256 hashCritical;
+
+    bool operator==(const SidechainLD& a) const;
+};
+
 struct SidechainUpdateMSG {
     uint8_t nSidechain;
     uint256 hashWTPrime;
     uint16_t nWorkScore;
-    int nHeight;
 };
 
 struct SidechainUpdatePackage {

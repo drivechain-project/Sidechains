@@ -87,9 +87,9 @@ BOOST_AUTO_TEST_CASE(criticaldata_valid)
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
 
-    coinbaseTx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(0, mtx.criticalData.hashCritical)));
+    coinbaseTx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(mtx.criticalData)));
 
-    // Create a block with the bribe
+    // Create a block with critical data commit
     std::vector<CMutableTransaction> vtx;
     vtx.push_back(coinbaseTx);
     vtx.push_back(mtx);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(criticaldata_invalid_locktime)
     vchSig.push_back((unsigned char)SIGHASH_ALL);
     mtx.vin[0].scriptSig << vchSig;
 
-    // Create a block with the bribe
+    // Create a block with critical data commit
     std::vector<CMutableTransaction> vout;
     vout.push_back(mtx);
 
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(criticaldata_invalid_no_commit)
     vchSig.push_back((unsigned char)SIGHASH_ALL);
     mtx.vin[0].scriptSig << vchSig;
 
-    // Create a block with the bribe
+    // Create a block with the critical data commit
     std::vector<CMutableTransaction> vtx;
     vtx.push_back(mtx);
 

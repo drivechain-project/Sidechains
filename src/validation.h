@@ -466,7 +466,7 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr
 std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams);
 
 /** Produce a BMM h* coinbase commitment for a block */
-CScript GenerateCriticalHashCommitment(int nHeight, const uint256& hashCritical);
+CScript GenerateCriticalHashCommitment(const CCriticalData& criticalData);
 
 /** Produce the SCDB hashMerkleRoot coinbase commitment for a block */
 CScript GenerateSCDBHashMerkleRootCommitment(const uint256& hashMerkleRoot);

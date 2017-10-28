@@ -20,164 +20,164 @@
 
 BOOST_FIXTURE_TEST_SUITE(bmm_tests, TestChain100Setup)
 
-/* TODO refactor along with DAG PR
-
-BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashValid)
+BOOST_AUTO_TEST_CASE(bmm_valid)
 {
-    // Check that valid critical hash is added to ratchet
+    // Check that valid sidechain critical hash commit is added to ratchet
     SidechainDB scdb;
 
-    // Create h* bribe script
-    uint256 hashCritical = GetRandHash();
-    CScript scriptPubKey;
-    scriptPubKey << OP_RETURN << CScriptNum::serialize(1) << ToByteVector(hashCritical);
-
-    // Create dummy coinbase with h*
+    // Create coinbase with h* commit
     CMutableTransaction mtx;
     mtx.nVersion = 1;
     mtx.vin.resize(1);
-    mtx.vout.resize(1);
+    mtx.vin[0].prevout.SetNull();
     mtx.vin[0].scriptSig = CScript() << 486604799;
-    mtx.vout.push_back(CTxOut(50 * CENT, scriptPubKey));
+
+    // Create critical data
+    CScript bytes;
+    bytes.resize(3);
+    bytes[0] = 0x00;
+    bytes[1] = 0xbf;
+    bytes[2] = 0x00;
+
+    bytes << CScriptNum::serialize(SIDECHAIN_TEST);
+    bytes << CScriptNum::serialize(0);
+
+    CCriticalData criticalData;
+    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.hashCritical = GetRandHash();
+
+    // Add h* commit to coinbase
+    mtx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(criticalData)));
 
     // Update SCDB so that h* is processed
     uint256 hashBlock = GetRandHash();
     std::string strError = "";
     scdb.Update(0, hashBlock, mtx.vout, strError);
 
-    // Get linking data
-    std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
-
     // Verify that h* was added
-    std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical);
-    BOOST_CHECK(it != mapLD.end());
-
+    BOOST_CHECK(scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
 }
 
-BOOST_AUTO_TEST_CASE(bmm_checkCriticalHashInvalid)
+BOOST_AUTO_TEST_CASE(bmm_invalid_sidechain)
 {
-    // Make sure that a invalid h* with a valid block number will
-    // be rejected.
+    // Commit with invalid sidechain number should be ignored
     SidechainDB scdb;
 
-    // Create h* bribe script
-    CScript scriptPubKey;
-    scriptPubKey << OP_RETURN << CScriptNum::serialize(21000) << 0x426974636F696E;
-
-    // Create dummy coinbase with h* bribe
+    // Create coinbase with h* commit
     CMutableTransaction mtx;
     mtx.nVersion = 1;
     mtx.vin.resize(1);
-    mtx.vout.resize(1);
+    mtx.vin[0].prevout.SetNull();
     mtx.vin[0].scriptSig = CScript() << 486604799;
-    mtx.vout.push_back(CTxOut(50 * CENT, scriptPubKey));
+
+    // Create critical data
+    CScript bytes;
+    bytes.resize(3);
+    bytes[0] = 0x00;
+    bytes[1] = 0xbf;
+    bytes[2] = 0x00;
+
+    // Use invalid sidechain number
+    bytes << CScriptNum::serialize(2600);
+    bytes << CScriptNum::serialize(0);
+
+    CCriticalData criticalData;
+    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.hashCritical = GetRandHash();
+
+    // Add h* commit to coinbase
+    mtx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(criticalData)));
 
     // Update SCDB so that h* is processed
     uint256 hashBlock = GetRandHash();
     std::string strError = "";
     scdb.Update(0, hashBlock, mtx.vout, strError);
-
-    // Verify that h* was rejected, linking data should be empty
-    std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
-    BOOST_CHECK(mapLD.empty());
-}
-
-BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberValid)
-{
-    // Make sure that a valid h* with a valid block number
-    // will be accepted.
-    SidechainDB scdb;
-
-    // We have to add the first h* to the ratchet so that
-    // there is something to compare with.
-
-    // Create h* bribe script
-    uint256 hashCritical = GetRandHash();
-    CScript scriptPubKey;
-    scriptPubKey << OP_RETURN << CScriptNum::serialize(1) << ToByteVector(hashCritical);
-
-    // Create dummy coinbase with h* in output
-    CMutableTransaction mtx;
-    mtx.nVersion = 1;
-    mtx.vin.resize(1);
-    mtx.vout.resize(1);
-    mtx.vin[0].scriptSig = CScript() << 486604799;
-    mtx.vout.push_back(CTxOut(50 * CENT, scriptPubKey));
-
-    // Update SCDB so that first h* is processed
-    uint256 hashBlock = GetRandHash();
-    std::string strError = "";
-    scdb.Update(0, hashBlock, mtx.vout, strError);
-
-    // Now we add a second h* with a valid block number
-
-    // Create second h* bribe script
-    uint256 hashCritical2 = GetRandHash();
-    CScript scriptPubKey2;
-    scriptPubKey2 << OP_RETURN << CScriptNum::serialize(2) << ToByteVector(hashCritical2);
-
-    // Update SCDB so that second h* is processed
-    mtx.vout[0] = CTxOut(50 * CENT, scriptPubKey2);
-    scdb.Update(0, hashBlock, mtx.vout, strError);
-
-    // Get linking data
-    std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
-
-    // Verify that h* was added
-    std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical2);
-    BOOST_CHECK(it != mapLD.end());
-}
-
-BOOST_AUTO_TEST_CASE(bmm_checkBlockNumberInvalid)
-{
-    // Try to add a valid h* with an invalid block number
-    // and make sure it is skipped.
-    SidechainDB scdb;
-
-    // We have to add the first h* to the ratchet so that
-    // there is something to compare with.
-
-    // Create first h* bribe script
-    CScript scriptPubKey;
-    scriptPubKey << OP_RETURN << CScriptNum::serialize(10) << ToByteVector(GetRandHash());
-
-    // Create dummy coinbase with h* in output
-    CMutableTransaction mtx;
-    mtx.nVersion = 1;
-    mtx.vin.resize(1);
-    mtx.vout.resize(1);
-    mtx.vin[0].scriptSig = CScript() << 486604799;
-    mtx.vout.push_back(CTxOut(50 * CENT, scriptPubKey));
-
-    // Update SCDB so that first h* is processed
-    std::string strError = "";
-    scdb.Update(0, GetRandHash(), mtx.vout, strError);
-
-    // Now we add a second h* with an invalid block number
-
-    // Create second h* bribe script
-    uint256 hashCritical2 = GetRandHash();
-    CScript scriptPubKey2;
-    scriptPubKey2 << OP_RETURN << CScriptNum::serialize(100) << ToByteVector(hashCritical2);
-
-    // Update SCDB so that second h* is processed
-    CMutableTransaction mtx1;
-    mtx1.nVersion = 1;
-    mtx1.vin.resize(1);
-    mtx1.vout.resize(1);
-    mtx1.vin[0].scriptSig = CScript() << 486604899;
-    mtx1.vout.push_back(CTxOut(50 * CENT, scriptPubKey2));
-
-    scdb.Update(1, GetRandHash(), mtx1.vout, strError);
-
-    // Get linking data
-    std::multimap<uint256, int> mapLD = scdb.GetLinkingData();
 
     // Verify that h* was rejected
-    std::multimap<uint256, int>::const_iterator it = mapLD.find(hashCritical2);
-    BOOST_CHECK(it == mapLD.end());
+    BOOST_CHECK(!scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
 }
 
-*/
+BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber_limit)
+{
+    // An h* commit with a DAG number > BMM_MAX_DAG
+    SidechainDB scdb;
+
+    // Create coinbase with h* commit
+    CMutableTransaction mtx;
+    mtx.nVersion = 1;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    mtx.vin[0].scriptSig = CScript() << 486604799;
+
+    // Create critical data
+    CScript bytes;
+    bytes.resize(3);
+    bytes[0] = 0x00;
+    bytes[1] = 0xbf;
+    bytes[2] = 0x00;
+
+    bytes << CScriptNum::serialize(0);
+    bytes << CScriptNum::serialize(BMM_MAX_DAG + 1);
+
+    CCriticalData criticalData;
+    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.hashCritical = GetRandHash();
+
+    // Add h* commit to coinbase
+    mtx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(criticalData)));
+
+    // Update SCDB so that h* is processed
+    uint256 hashBlock = GetRandHash();
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
+
+    // Verify that h* was rejected from the ratchet
+    BOOST_CHECK(!scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
+}
+
+BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber)
+{
+    // Commit with invalid dag number should be ignored
+    SidechainDB scdb;
+
+    // Add some valid data to the ratchet
+
+    // Create coinbase with h* commit
+    CMutableTransaction mtx;
+    mtx.nVersion = 1;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    mtx.vin[0].scriptSig = CScript() << 486604799;
+
+    // Create critical data
+    CScript bytes;
+    bytes.resize(3);
+    bytes[0] = 0x00;
+    bytes[1] = 0xbf;
+    bytes[2] = 0x00;
+
+    bytes << CScriptNum::serialize(0);
+    bytes << CScriptNum::serialize(21);
+
+    CCriticalData criticalData;
+    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.hashCritical = GetRandHash();
+
+    // Add h* commit to coinbase
+    mtx.vout.push_back(CTxOut(50 * CENT, GenerateCriticalHashCommitment(criticalData)));
+
+    // Update SCDB so that h* is processed
+    uint256 hashBlock = GetRandHash();
+    std::string strError = "";
+    scdb.Update(0, hashBlock, mtx.vout, strError);
+
+    // Verify that h* was rejected from the ratchet
+    BOOST_CHECK(!scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
+}
+
+BOOST_AUTO_TEST_CASE(bmm_maturity)
+{
+    // Test maturity rules of sidechain h* critical data transactions
+}
 
 BOOST_AUTO_TEST_SUITE_END()

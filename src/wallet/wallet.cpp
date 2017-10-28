@@ -4160,11 +4160,17 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
 
 int CMerkleTx::GetBlocksToMaturity() const
 {
-    if (!IsCoinBase())
-        return 0;
-    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
-}
+    // TODO for critical data transactions, relating to sidechain h*(s),
+    // use ratchet depth, instead of mainchain depth for maturity.
+    // (use CheckBlocksAtop())
+    if (tx->IsCoinBase())
+        return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    else
+    if (!tx->criticalData.IsNull())
+        return std::max(0, (CRITICAL_DATA_MATURITY+1) - GetDepthInMainChain());
 
+    return 0;
+}
 
 bool CMerkleTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state)
 {

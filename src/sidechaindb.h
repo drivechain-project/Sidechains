@@ -18,6 +18,7 @@ class uint256;
 
 struct Sidechain;
 struct SidechainDeposit;
+struct SidechainLD;
 struct SidechainUpdateMSG;
 struct SidechainUpdatePackage;
 struct SidechainWTPrimeState;
@@ -37,8 +38,11 @@ public:
     /** Add a new WT^ to the database */
     bool AddWTPrime(uint8_t nSidechain, const CTransaction& tx);
 
+    /** Check that ratchet member has required BLOCKS_ATOP */
+    bool CheckBlocksAtop(const SidechainLD& ld) const;
+
     /** Check SCDB WT^ verification status */
-    bool CheckWorkScore(const uint8_t& nSidechain, const uint256& hashWTPrime) const;
+    bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime) const;
 
     /** Return vector of deposits this tau for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
@@ -52,11 +56,8 @@ public:
     /** Return what the SCDB hash would be if the updates are applied */
     uint256 GetHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores) const;
 
-    /**
-     * Return from the BMM ratchet the data which is required to
-     * validate an OP_BRIBE script.
-     */
-    std::multimap<uint256, int> GetLinkingData() const;
+    /**  Return BMM ratchet data for the specified sidechain, if valid */
+    bool GetLinkingData(uint8_t nSidechain, std::vector<SidechainLD>& ld) const;
 
     /** Get status of nSidechain's WT^(s) (public for unit tests) */
     std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
@@ -69,6 +70,9 @@ public:
 
     /** Return true if the deposit is cached */
     bool HaveDepositCached(const SidechainDeposit& deposit) const;
+
+    /** Return true if LD is in the ratchet */
+    bool HaveLinkingData(uint8_t nSidechain, uint256 hashCritical) const;
 
     /** Return true if the full WT^ CTransaction is cached */
     bool HaveWTPrimeCached(const uint256& hashWTPrime) const;
@@ -98,8 +102,7 @@ private:
     std::vector<SCDBIndex> SCDB;
 
     /** BMM ratchet */
-    std::multimap<uint256, int> mapBMMLD;
-    std::queue<uint256> queueBMMLD;
+    std::vector<std::vector<SidechainLD>> ratchet;
 
     /** Cache of potential WT^ transactions */
     std::vector<CTransaction> vWTPrimeCache;

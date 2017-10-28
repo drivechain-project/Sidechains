@@ -248,10 +248,10 @@ bool CScript::IsCriticalHashCommit() const
 
     // Check script header
     if ((*this)[0] != OP_RETURN ||
-            (*this)[1] != 0x23 ||
-            (*this)[2] != 0x50 ||
-            (*this)[3] != 0x50 ||
-            (*this)[4] != 0x33)
+            (*this)[1] != 0x48 ||
+            (*this)[2] != 0x61 ||
+            (*this)[3] != 0x73 ||
+            (*this)[4] != 0x68)
         return false;
 
     return true;

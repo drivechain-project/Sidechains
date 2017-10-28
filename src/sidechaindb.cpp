@@ -11,7 +11,6 @@
 #include "uint256.h"
 #include "utilstrencodings.h"
 
-#include <iostream>
 SidechainDB::SidechainDB()
 {
     size_t nSidechains = ARRAYLEN(ValidSidechains);
@@ -98,7 +97,30 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const CTransaction& tx)
     return false;
 }
 
-bool SidechainDB::CheckWorkScore(const uint8_t& nSidechain, const uint256& hashWTPrime) const
+bool SidechainDB::CheckBlocksAtop(const SidechainLD& ld) const
+{
+    if (!IsSidechainNumberValid(ld.nSidechain))
+        return false;
+
+    // Nothing could have matured
+    if (ratchet[ld.nSidechain].size() < CRITICAL_DATA_MATURITY) {
+        return false;
+    }
+
+    // Check that LD has matured
+    for (size_t i = 0; i < ratchet[ld.nSidechain].size(); i++) {
+        if (ratchet[ld.nSidechain][i] == ld) {
+            if (i < (SIDECHAIN_MAX_LD - CRITICAL_DATA_MATURITY))
+                return true;
+            else
+                break;
+        }
+    }
+
+    return false;
+}
+
+bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime) const
 {
     if (!IsSidechainNumberValid(nSidechain))
         return false;
@@ -310,35 +332,26 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
         if (!scriptPubKey.IsCriticalHashCommit())
             continue;
 
-        std::cout << "scdb scan h* [0]\n";
-
         CScript::const_iterator phash = scriptPubKey.begin() + 5;
         opcodetype opcode;
         std::vector<unsigned char> vchHash;
         if (!scriptPubKey.GetOp(phash, opcode, vchHash))
             continue;
-        std::cout << "scdb scan h* [1] " << vchHash.size() << "\n";
         if (vchHash.size() != sizeof(uint256))
             continue;
-        std::cout << "scdb scan h* [2]\n";
 
         uint256 hashCritical = uint256(vchHash);
-
 
         // Read critical data bytes if there are any
         std::vector<unsigned char> bytes;
         if (scriptPubKey.size() > 37) {
-            std::cout << "scdb scan h* [3]\n";
             CScript::const_iterator pbytes = scriptPubKey.begin() + 38;
             if (!scriptPubKey.GetOp(pbytes, opcode, bytes))
                 continue;
-            std::cout << "scdb scan h* [4] " << bytes.size() << "\n";
 
             // Do the bytes indicate that this is a sidechain h*?
             if (bytes[0] != 0x00 || bytes[1] != 0xbf || bytes[2] != 0x00)
                 continue;
-
-            std::cout << "scdb scan h* [5]\n";
 
             // Read sidechain number
             CScript::const_iterator psidechain = scriptPubKey.begin() + 42;
@@ -346,76 +359,39 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
             if (!scriptPubKey.GetOp(psidechain, opcode, vchSidechain))
                 continue;
 
-            CScriptNum nSidechain(vchSidechain, true);
-            std::cout << "nSidechain: " << nSidechain.getint() << std::endl;
+            uint8_t nSidechain = CScriptNum(vchSidechain, true).getint();
 
-            if (!IsSidechainNumberValid(nSidechain.getint()))
+            if (!IsSidechainNumberValid(nSidechain))
                 continue;
 
-            std::cout << "scdb scan h* [6]\n";
-
-            // Read dag number
+            // Read prev block ref
             CScript::const_iterator pdag = psidechain + vchSidechain.size();
             std::vector<unsigned char> vchDAG;
             if (!scriptPubKey.GetOp(pdag, opcode, vchDAG))
                 continue;
 
-            CScriptNum nDAG(vchDAG, true);
-            std::cout << "nDAG: " << nDAG.getint() << std::endl;
-            std::cout << "scdb scan h* [7]\n";
-
+            CScriptNum nPrevBlockRef(vchDAG, true);
+            if (nPrevBlockRef.getint() > BMM_MAX_DAG)
+                continue;
+            if (nPrevBlockRef.getint() > ratchet[nSidechain].size())
+                continue;
 
             SidechainLD ld;
-            ld.nSidechain = SIDECHAIN_TEST;
+            ld.nSidechain = nSidechain;
             ld.hashCritical = hashCritical;
-            ld.nDAG = 0;
+            ld.nPrevBlockRef = nPrevBlockRef.getint();
 
-            ratchet[SIDECHAIN_TEST].push_back(ld);
-        }
+            ratchet[nSidechain].push_back(ld);
 
-/*
-        // Check block number
-        bool fValid = false;
-        if (queueBMMLD.size()) {
-            // Compare block number with most recent h* block number
-            uint256 hashMostRecent = queueBMMLD.back();
-            std::multimap<uint256, int>::const_iterator it = mapBMMLD.find(hashMostRecent);
-            if (it == mapBMMLD.end())
-                return false;
-
-            int nHeightMostRecent = it->second;
-
-            if ((nBlock.getint() - nHeightMostRecent) <= 1)
-                fValid = true;
-        } else {
-            // No previous h* to compare with
-            fValid = true;
-        }
-        if (!fValid) {
-            strError = "SidechainDB::Update: h* invalid";
-            continue;
-        }
-
-        // Update BMM linking data
-        // Add new linking data
-        mapBMMLD.emplace(hashCritical, nBlock.getint());
-        queueBMMLD.push(hashCritical);
-
-        // Remove old linking data if we need to
-        if (mapBMMLD.size() > SIDECHAIN_MAX_LD) {
-            uint256 hashRemove = queueBMMLD.front();
-            std::multimap<uint256, int>::const_iterator it = mapBMMLD.lower_bound(hashRemove);
-            if (it->first == hashRemove) {
-                mapBMMLD.erase(it);
-                queueBMMLD.pop();
+            // Maintain ratchet size limit
+            if (!(ratchet[nSidechain].size() < SIDECHAIN_MAX_LD)) {
+                // TODO change to vector of queue for pop()
+                ratchet.erase(ratchet.begin());
             }
         }
-        */
     }
 
     // Scan for new WT^(s) and start tracking them
-    // TODO
-    // SidechainDB::AddWTPrime
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
         if (scriptPubKey.IsWTPrimeHashCommit()) {

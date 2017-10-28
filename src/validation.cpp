@@ -2867,7 +2867,7 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
     return commitment;
 }
 
-CScript GenerateCriticalHashCommitment(int nHeight, const uint256& hashCritical)
+CScript GenerateCriticalHashCommitment(const CCriticalData& criticalData)
 {
     // TODO
     // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
@@ -2875,16 +2875,17 @@ CScript GenerateCriticalHashCommitment(int nHeight, const uint256& hashCritical)
 
     // Add script header
     script << OP_RETURN;
-    script.push_back(0x23);
-    script.push_back(0x50);
-    script.push_back(0x50);
-    script.push_back(0x33);
-
-    // Add block number
-    //script << CScriptNum(nHeight);
+    script.push_back(0x48);
+    script.push_back(0x61);
+    script.push_back(0x73);
+    script.push_back(0x68);
 
     // Add h*
-    script << ToByteVector(hashCritical);
+    script << ToByteVector(criticalData.hashCritical);
+
+    // Add bytes (optional)
+    if (!criticalData.bytes.empty())
+        script << criticalData.bytes;
 
     return script;
 }
@@ -2925,7 +2926,6 @@ CScript GenerateWTPrimeHashCommitment(const uint256& hashWTPrime)
     script << ToByteVector(hashWTPrime);
 
     return script;
-
 }
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev, int64_t nAdjustedTime)
