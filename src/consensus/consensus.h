@@ -19,6 +19,11 @@ static const int64_t MAX_BLOCK_SIGOPS_COST = 80000;
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 100;
 
+static const int BMM_MAX_LD = 4000;
+static const int BMM_MAX_PREVBLOCK = 100;
+static const int BMM_REQUEST_MATURITY = 150;
+static const int CRITICAL_DATA_MATURITY = 100;
+
 /** Flags for nSequence and nLockTime locks */
 enum {
     /* Interpret sequence numbers as relative lock-time constraints. */

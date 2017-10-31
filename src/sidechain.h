@@ -20,11 +20,7 @@ static const char* const SIDECHAIN_TEST_PRIV = "cQMQ99mA5Xi2Hm9YM3WmB2JcJai3tzGu
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
 //! Max number of WT^(s) per sidechain during tau
-static const int SIDECHAIN_MAX_WT = 3;
-
-static const int SIDECHAIN_MAX_LD = 4000;
-static const int BMM_MAX_DAG = 200;
-static const int CRITICAL_DATA_MATURITY = 200;
+static const int SIDECHAIN_MAX_WT = 3; // TODO remove
 
 enum SidechainNumber {
     SIDECHAIN_TEST = 0,
