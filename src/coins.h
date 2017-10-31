@@ -20,7 +20,7 @@
 #include <boost/foreach.hpp>
 #include <unordered_map>
 
-/** 
+/**
  * Pruned version of CTransaction: only retains metadata and unspent transaction outputs
  *
  * Serialized format:
@@ -78,6 +78,10 @@ public:
     //! whether transaction is a coinbase
     bool fCoinBase;
 
+    //! whether transaction has critical data
+    bool fCriticalData;
+    CCriticalData criticalData;
+
     //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
     std::vector<CTxOut> vout;
 
@@ -90,6 +94,10 @@ public:
 
     void FromTx(const CTransaction &tx, int nHeightIn) {
         fCoinBase = tx.IsCoinBase();
+        fCriticalData = !tx.criticalData.IsNull();
+        if (fCriticalData) {
+            criticalData = tx.criticalData;
+        }
         vout = tx.vout;
         nHeight = nHeightIn;
         nVersion = tx.nVersion;
@@ -103,13 +111,15 @@ public:
 
     void Clear() {
         fCoinBase = false;
+        fCriticalData = false;
+        criticalData.SetNull();
         std::vector<CTxOut>().swap(vout);
         nHeight = 0;
         nVersion = 0;
     }
 
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0) { }
+    CCoins() : fCoinBase(false), fCriticalData(false), criticalData(), vout(0), nHeight(0), nVersion(0) { }
 
     //!remove spent outputs at the end of vout
     void Cleanup() {
@@ -129,6 +139,8 @@ public:
 
     void swap(CCoins &to) {
         std::swap(to.fCoinBase, fCoinBase);
+        std::swap(to.fCriticalData, fCriticalData);
+        std::swap(to.criticalData, criticalData);
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
@@ -140,6 +152,7 @@ public:
          if (a.IsPruned() && b.IsPruned())
              return true;
          return a.fCoinBase == b.fCoinBase &&
+                a.fCriticalData == b.fCriticalData &&
                 a.nHeight == b.nHeight &&
                 a.nVersion == b.nVersion &&
                 a.vout == b.vout;
@@ -174,6 +187,11 @@ public:
                     chAvail |= (1 << i);
             ::Serialize(s, chAvail);
         }
+        // critical data
+        ::Serialize(s, fCriticalData);
+        if (fCriticalData)
+            ::Serialize(s, criticalData);
+
         // txouts themself
         for (unsigned int i = 0; i < vout.size(); i++) {
             if (!vout[i].IsNull())
@@ -206,6 +224,12 @@ public:
             if (chAvail != 0)
                 nMaskCode--;
         }
+
+        // critical data
+        ::Unserialize(s, fCriticalData);
+        if (fCriticalData)
+            ::Unserialize(s, criticalData);
+
         // txouts themself
         vout.assign(vAvail.size(), CTxOut());
         for (unsigned int i = 0; i < vAvail.size(); i++) {
@@ -347,10 +371,10 @@ public:
 
 class CCoinsViewCache;
 
-/** 
+/**
  * A reference to a mutable cache entry. Encapsulating it allows us to run
  *  cleanup code after the modification is finished, and keeping track of
- *  concurrent modifications. 
+ *  concurrent modifications.
  */
 class CCoinsModifier
 {
@@ -377,7 +401,7 @@ protected:
 
     /**
      * Make mutable so that we can "fill the cache" even from Get-methods
-     * declared as "const".  
+     * declared as "const".
      */
     mutable uint256 hashBlock;
     mutable CCoinsMap cacheCoins;
@@ -447,7 +471,7 @@ public:
     //! Calculate the size of the cache (in bytes)
     size_t DynamicMemoryUsage() const;
 
-    /** 
+    /**
      * Amount of bitcoins coming in to a transaction
      * Note that lightweight clients may not know anything besides the hash of previous transactions,
      * so may not be able to calculate this.
