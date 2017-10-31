@@ -4,6 +4,7 @@
 
 #include "sidechaindb.h"
 
+#include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "primitives/transaction.h"
 #include "script/script.h"
@@ -97,27 +98,59 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const CTransaction& tx)
     return false;
 }
 
-bool SidechainDB::CheckBlocksAtop(const SidechainLD& ld) const
+int SidechainDB::CountBlocksAtop(const CCriticalData& data) const
+{
+    // Translate critical data into LD
+    SidechainLD ld;
+    ld.hashCritical = data.hashCritical;
+
+    // Convert bytes to script for easy parsing
+    CScript bytes(data.bytes.begin(), data.bytes.end());
+
+    // Get nSidechain
+    CScript::const_iterator psidechain = bytes.begin() + 3;
+    opcodetype opcode;
+    std::vector<unsigned char> vchSidechain;
+    if (!bytes.GetOp(psidechain, opcode, vchSidechain))
+        return -1;
+
+    ld.nSidechain = CScriptNum(vchSidechain, true).getint();
+
+    if (!IsSidechainNumberValid(ld.nSidechain))
+        return -1;
+
+    // Get prevBlockRef
+    CScript::const_iterator pprevblock = bytes.begin() + 3 + vchSidechain.size();
+    std::vector<unsigned char> vchPrevBlockRef;
+    if (!bytes.GetOp(pprevblock, opcode, vchPrevBlockRef))
+        return -1;
+
+    ld.nPrevBlockRef = CScriptNum(vchPrevBlockRef, true).getint();
+
+    if (ld.nPrevBlockRef > BMM_MAX_PREVBLOCK)
+        return -1;
+
+    return CountBlocksAtop(ld);
+}
+
+int SidechainDB::CountBlocksAtop(const SidechainLD& ld) const
 {
     if (!IsSidechainNumberValid(ld.nSidechain))
-        return false;
+        return -1;
 
     // Nothing could have matured
-    if (ratchet[ld.nSidechain].size() < CRITICAL_DATA_MATURITY) {
-        return false;
+    if (ratchet[ld.nSidechain].size() < BMM_REQUEST_MATURITY) {
+        return -1;
     }
 
     // Check that LD has matured
     for (size_t i = 0; i < ratchet[ld.nSidechain].size(); i++) {
         if (ratchet[ld.nSidechain][i] == ld) {
-            if (i < (SIDECHAIN_MAX_LD - CRITICAL_DATA_MATURITY))
-                return true;
-            else
-                break;
+            return ratchet[ld.nSidechain].size() - i;
         }
     }
 
-    return false;
+    return -1;
 }
 
 bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime) const
@@ -365,13 +398,13 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
                 continue;
 
             // Read prev block ref
-            CScript::const_iterator pdag = psidechain + vchSidechain.size();
-            std::vector<unsigned char> vchDAG;
-            if (!scriptPubKey.GetOp(pdag, opcode, vchDAG))
+            CScript::const_iterator pprevblockref = psidechain + vchSidechain.size();
+            std::vector<unsigned char> vchPrevBlock;
+            if (!scriptPubKey.GetOp(pprevblockref, opcode, vchPrevBlock))
                 continue;
 
-            CScriptNum nPrevBlockRef(vchDAG, true);
-            if (nPrevBlockRef.getint() > BMM_MAX_DAG)
+            CScriptNum nPrevBlockRef(vchPrevBlock, true);
+            if (nPrevBlockRef.getint() > BMM_MAX_PREVBLOCK)
                 continue;
             if (nPrevBlockRef.getint() > ratchet[nSidechain].size())
                 continue;
@@ -384,7 +417,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
             ratchet[nSidechain].push_back(ld);
 
             // Maintain ratchet size limit
-            if (!(ratchet[nSidechain].size() < SIDECHAIN_MAX_LD)) {
+            if (!(ratchet[nSidechain].size() < BMM_MAX_LD)) {
                 // TODO change to vector of queue for pop()
                 ratchet.erase(ratchet.begin());
             }

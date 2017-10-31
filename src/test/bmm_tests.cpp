@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chainparams.h"
+#include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "miner.h"
@@ -97,9 +98,9 @@ BOOST_AUTO_TEST_CASE(bmm_invalid_sidechain)
     BOOST_CHECK(!scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
 }
 
-BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber_limit)
+BOOST_AUTO_TEST_CASE(bmm_invalid_prevblockref_limit)
 {
-    // An h* commit with a DAG number > BMM_MAX_DAG
+    // An h* commit with a prevBlockRef number > BMM_MAX_PREVBLOCK
     SidechainDB scdb;
 
     // Create coinbase with h* commit
@@ -117,7 +118,7 @@ BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber_limit)
     bytes[2] = 0x00;
 
     bytes << CScriptNum::serialize(0);
-    bytes << CScriptNum::serialize(BMM_MAX_DAG + 1);
+    bytes << CScriptNum::serialize(BMM_MAX_PREVBLOCK + 1);
 
     CCriticalData criticalData;
     criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
@@ -135,9 +136,9 @@ BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber_limit)
     BOOST_CHECK(!scdb.HaveLinkingData(SIDECHAIN_TEST, criticalData.hashCritical));
 }
 
-BOOST_AUTO_TEST_CASE(bmm_invalid_dagnumber)
+BOOST_AUTO_TEST_CASE(bmm_invalid_prevblockref)
 {
-    // Commit with invalid dag number should be ignored
+    // Commit with invalid prevBlockRef number should be ignored
     SidechainDB scdb;
 
     // Add some valid data to the ratchet

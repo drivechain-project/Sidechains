@@ -11,6 +11,7 @@
 
 #include "uint256.h"
 
+class CCriticalData;
 class CScript;
 class CTransaction;
 class CTxOut;
@@ -38,8 +39,11 @@ public:
     /** Add a new WT^ to the database */
     bool AddWTPrime(uint8_t nSidechain, const CTransaction& tx);
 
-    /** Check that ratchet member has required BLOCKS_ATOP */
-    bool CheckBlocksAtop(const SidechainLD& ld) const;
+    /** Count ratchet member blocks atop */
+    int CountBlocksAtop(const CCriticalData& data) const;
+
+    /** Count ratchet member blocks atop (overload) */
+    int CountBlocksAtop(const SidechainLD& ld) const;
 
     /** Check SCDB WT^ verification status */
     bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime) const;

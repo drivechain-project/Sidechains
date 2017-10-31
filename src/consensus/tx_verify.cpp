@@ -7,13 +7,14 @@
 #include "consensus.h"
 #include "primitives/transaction.h"
 #include "script/interpreter.h"
+#include "sidechaindb.h"
 #include "validation.h"
 
 // TODO remove the following dependencies
 #include "chain.h"
 #include "coins.h"
 #include "utilmoneystr.h"
- 
+
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
     if (tx.nLockTime == 0)
@@ -222,6 +223,21 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, CValidationState& state, c
                     return state.Invalid(false,
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase",
                         strprintf("tried to spend coinbase at depth %d", nSpendHeight - coins->nHeight));
+            }
+
+            // If prev is critical data tx, check that it's matured
+            if (coins->fCriticalData && !coins->criticalData.IsNull()) {
+                if (nSpendHeight - coins->nHeight < CRITICAL_DATA_MATURITY)
+                    return state.Invalid(false,
+                        REJECT_INVALID, "bad-txns-premature-spend-of-critical-data",
+                        strprintf("tried to spend critical data at depth %d", nSpendHeight - coins->nHeight));
+                // TODO should we check this here?
+                //if (coins->criticalData.IsBMMRequest()) {
+                //    if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
+                //        return state.Invalid(false,
+                //            REJECT_INVALID, "bad-txns-premature-spend-of-critical-data-bmm-request",
+                //            strprintf("tried to spend critical data bmm request at depth %d", nSpendHeight - coins->nHeight));
+                //}
             }
 
             // Check for negative or overflow input values

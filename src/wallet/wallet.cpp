@@ -25,6 +25,7 @@
 #include "script/sign.h"
 #include "scheduler.h"
 #include "sidechain.h"
+#include "sidechaindb.h"
 #include "timedata.h"
 #include "txmempool.h"
 #include "util.h"
@@ -2738,7 +2739,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     if (GetBoolArg("-walletrejectlongchains", DEFAULT_WALLET_REJECT_LONG_CHAINS)) {
         // Lastly, ensure this tx will pass the mempool's chain limits
         LockPoints lp;
-        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, 0, lp);
+        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, 0, lp);
         CTxMemPool::setEntries setAncestors;
         size_t nLimitAncestors = GetArg("-limitancestorcount", DEFAULT_ANCESTOR_LIMIT);
         size_t nLimitAncestorSize = GetArg("-limitancestorsize", DEFAULT_ANCESTOR_SIZE_LIMIT)*1000;
@@ -4160,11 +4161,11 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
 
 int CMerkleTx::GetBlocksToMaturity() const
 {
-    // TODO for critical data transactions, relating to sidechain h*(s),
-    // use ratchet depth, instead of mainchain depth for maturity.
-    // (use CheckBlocksAtop())
     if (tx->IsCoinBase())
         return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    else
+    if (tx->criticalData.IsBMMRequest())
+        return (BMM_REQUEST_MATURITY - scdb.CountBlocksAtop(tx->criticalData));
     else
     if (!tx->criticalData.IsNull())
         return std::max(0, (CRITICAL_DATA_MATURITY+1) - GetDepthInMainChain());

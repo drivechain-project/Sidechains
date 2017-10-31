@@ -597,8 +597,21 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
             }
         }
 
+        bool fSpendsBMMRequest = false;
+        for (const CTxIn& txin : tx.vin) {
+            const CCoins *coins = view.AccessCoins(txin.prevout.hash);
+            if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
+                // Check maturity
+                if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
+                    return state.Invalid(false, REJECT_INVALID, "bad-txn-immature-bmm-request");
+
+                fSpendsBMMRequest = true;
+                break;
+            }
+        }
+
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, nSigOpsCost, lp);
+                              fSpendsCoinbase, fSpendsBMMRequest, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -1230,6 +1243,12 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 const COutPoint &prevout = tx.vin[i].prevout;
                 const CCoins* coins = inputs.AccessCoins(prevout.hash);
                 assert(coins);
+
+                // Check BMM h* request maturity when trying to spend
+                if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
+                    if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
+                        return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-bmm-request");
+                }
 
                 // Verify signature
                 CScriptCheck check(*coins, tx, i, flags, cacheStore, &txdata);
@@ -3033,7 +3052,8 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
-    // Check critical data transactions
+
+    // Check critical data transactions (outputs, not spending)
     if (true /* TODO versionbits */) {
         for (const auto& tx: block.vtx) {
             // Look for transactions with non-null CCriticalData

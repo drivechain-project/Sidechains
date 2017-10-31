@@ -206,6 +206,26 @@ public:
     {
         return (bytes.empty() && hashCritical.IsNull());
     }
+
+    bool IsBMMRequest() const
+    {
+        // Check for h* commit flag in critical data bytes
+        if (IsNull())
+            return false;
+        if (bytes.size() < 4)
+            return false;
+
+        if (bytes[0] == 0x00 && bytes[1] == 0xbf && bytes[2] == 0x00)
+            return true;
+
+        return false;
+    }
+
+    friend bool operator==(const CCriticalData& a, const CCriticalData& b)
+    {
+        return (a.bytes == b.bytes &&
+                a.hashCritical == b.hashCritical);
+    }
 };
 
 /**
