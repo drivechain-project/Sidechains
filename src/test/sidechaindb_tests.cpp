@@ -28,8 +28,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_isolated)
     uint256 hashWTWimble = GetRandHash();
 
     const Sidechain& test = ValidSidechains[SIDECHAIN_TEST];
-    const Sidechain& hivemind = ValidSidechains[SIDECHAIN_TEST];
-    const Sidechain& wimble = ValidSidechains[SIDECHAIN_TEST];
+    const Sidechain& hivemind = ValidSidechains[SIDECHAIN_HIVEMIND];
+    const Sidechain& wimble = ValidSidechains[SIDECHAIN_WIMBLE];
 
     // SIDECHAIN_TEST
     SidechainWTPrimeState wtTest;
