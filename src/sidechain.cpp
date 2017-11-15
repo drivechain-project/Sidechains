@@ -185,7 +185,7 @@ bool SCDBIndex::GetMember(uint256 hashWT, SidechainWTPrimeState& wt) const
 
 bool IsSidechainNumberValid(uint8_t nSidechain)
 {
-    if (!(nSidechain < ARRAYLEN(ValidSidechains)))
+    if (!(nSidechain < ValidSidechains.size()))
         return false;
 
     // Check that number corresponds to a valid sidechain

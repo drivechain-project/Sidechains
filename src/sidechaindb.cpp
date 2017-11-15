@@ -14,7 +14,7 @@
 
 SidechainDB::SidechainDB()
 {
-    size_t nSidechains = ARRAYLEN(ValidSidechains);
+    size_t nSidechains = ValidSidechains.size();
     SCDB.resize(nSidechains );
     ratchet.resize(nSidechains);
 }
@@ -240,7 +240,7 @@ std::vector<CTransaction> SidechainDB::GetWTPrimeCache() const
 bool SidechainDB::HasState() const
 {
     // Make sure that SCDB is actually initialized
-    if (SCDB.size() != ARRAYLEN(ValidSidechains))
+    if (SCDB.size() != ValidSidechains.size())
         return false;
 
     // Check if any SCDBIndex(s) are populated
