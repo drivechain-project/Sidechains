@@ -15,7 +15,7 @@
 SidechainDB::SidechainDB()
 {
     size_t nSidechains = ValidSidechains.size();
-    SCDB.resize(nSidechains );
+    SCDB.resize(nSidechains);
     ratchet.resize(nSidechains);
 }
 
@@ -100,33 +100,18 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const CTransaction& tx)
 
 int SidechainDB::CountBlocksAtop(const CCriticalData& data) const
 {
+    uint8_t nSidechain;
+    uint16_t nPrevBlockRef;
+    if (!data.IsBMMRequest(nSidechain, nPrevBlockRef))
+        return -1;
+
     // Translate critical data into LD
     SidechainLD ld;
+    ld.nSidechain = nSidechain;
+    ld.nPrevBlockRef = nPrevBlockRef;
     ld.hashCritical = data.hashCritical;
 
-    // Convert bytes to script for easy parsing
-    CScript bytes(data.bytes.begin(), data.bytes.end());
-
-    // Get nSidechain
-    CScript::const_iterator psidechain = bytes.begin() + 3;
-    opcodetype opcode;
-    std::vector<unsigned char> vchSidechain;
-    if (!bytes.GetOp(psidechain, opcode, vchSidechain))
-        return -1;
-
-    ld.nSidechain = CScriptNum(vchSidechain, true).getint();
-
-    if (!IsSidechainNumberValid(ld.nSidechain))
-        return -1;
-
-    // Get prevBlockRef
-    CScript::const_iterator pprevblock = bytes.begin() + 3 + vchSidechain.size();
-    std::vector<unsigned char> vchPrevBlockRef;
-    if (!bytes.GetOp(pprevblock, opcode, vchPrevBlockRef))
-        return -1;
-
-    ld.nPrevBlockRef = CScriptNum(vchPrevBlockRef, true).getint();
-
+    // TODO Remove
     if (ld.nPrevBlockRef > BMM_MAX_PREVBLOCK)
         return -1;
 
@@ -342,8 +327,6 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
     if (!vout.size())
         return false;
 
-    // TODO skip if nHeight < drivechains activation block height
-
     // If a sidechain's tau period ended, reset WT^ verification status
     for (const Sidechain& s : ValidSidechains) {
         if (nHeight > 0 && (nHeight % s.GetTau()) == 0)
@@ -368,53 +351,33 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const std::vecto
      * scanned this latest block.
      */
 
-    // Scan for h*(s)
+    // Scan for BMM h*(s)
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
         if (!scriptPubKey.IsCriticalHashCommit())
             continue;
 
-        uint256 hashCritical(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
-
-        CCriticalData criticalData;
-        criticalData.hashCritical = hashCritical;
-
         // Read critical data bytes if there are any
         if (scriptPubKey.size() > 38) {
+            CCriticalData criticalData;
+            criticalData.hashCritical = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
             criticalData.bytes = std::vector<unsigned char>(scriptPubKey.begin() + 38, scriptPubKey.end());
 
             // Do the bytes indicate that this is a sidechain h*?
-            if (!criticalData.IsBMMRequest())
+            uint8_t nSidechain;
+            uint16_t nPrevBlockRef;
+            if (!criticalData.IsBMMRequest(nSidechain, nPrevBlockRef))
                 continue;
-
-            // Read sidechain number
-            CScript::const_iterator psidechain = scriptPubKey.begin() + 41;
-            opcodetype opcode;
-            std::vector<unsigned char> vchSidechain;
-            if (!scriptPubKey.GetOp(psidechain, opcode, vchSidechain))
+            if (nPrevBlockRef > BMM_MAX_PREVBLOCK)
                 continue;
-
-            uint8_t nSidechain = CScriptNum(vchSidechain, true).getint();
-            if (!IsSidechainNumberValid(nSidechain))
-                continue;
-
-            // Read prev block ref
-            CScript::const_iterator pprevblockref = psidechain + vchSidechain.size();
-            std::vector<unsigned char> vchPrevBlock;
-            if (!scriptPubKey.GetOp(pprevblockref, opcode, vchPrevBlock))
-                continue;
-
-            CScriptNum nPrevBlockRef(vchPrevBlock, true);
-            if (nPrevBlockRef.getint() > BMM_MAX_PREVBLOCK)
-                continue;
-            if (nPrevBlockRef.getint() > ratchet[nSidechain].size())
+            if (nPrevBlockRef > ratchet[nSidechain].size())
                 continue;
 
             SidechainLD ld;
             ld.nSidechain = nSidechain;
-            ld.hashCritical = hashCritical;
-            ld.nPrevBlockRef = nPrevBlockRef.getint();
+            ld.hashCritical = criticalData.hashCritical;
+            ld.nPrevBlockRef = nPrevBlockRef;
 
             ratchet[nSidechain].push_back(ld);
 

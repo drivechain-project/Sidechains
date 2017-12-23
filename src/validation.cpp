@@ -370,7 +370,7 @@ void GetSidechainValues(const CTransaction &tx, CAmount& amtSidechainUTXO, CAmou
                 amtSidechainUTXO += out.nValue;
             } else {
                 amtUserInput += out.nValue;
-            }        
+            }
         }
     }
 
@@ -422,9 +422,15 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         return state.DoS(0, false, REJECT_NONSTANDARD, "no-witness-yet", true);
     }
 
+    // Reject critical data / Drivechain BMM transactions before Drivechains are activated (override with -prematuredrivechains)
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+    if (!GetBoolArg("-prematuredrivechains", false) && !tx.criticalData.IsNull() && !drivechainsEnabled) {
+        return state.DoS(0, false, REJECT_NONSTANDARD, "no-drivechains-yet", true);
+    }
+
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     std::string reason;
-    if (fRequireStandard && !IsStandardTx(tx, reason, witnessEnabled))
+    if (fRequireStandard && !IsStandardTx(tx, reason, witnessEnabled)) // TODO drivehainsEnabled
         return state.DoS(0, false, REJECT_NONSTANDARD, reason);
 
     // Only accept nLockTime-using transactions that can be mined in the next
@@ -438,6 +444,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         return state.Invalid(false, REJECT_ALREADY_KNOWN, "txn-already-in-mempool");
 
     // Sidechain deposit / withdraw checks
+    if (drivechainsEnabled)
     {
         // TODO be more selective about which transactions have
         // GetSidechainValues() called on them for efficiency.
@@ -598,15 +605,17 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         }
 
         bool fSpendsBMMRequest = false;
-        for (const CTxIn& txin : tx.vin) {
-            const CCoins *coins = view.AccessCoins(txin.prevout.hash);
-            if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
-                // Check maturity
-                if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
-                    return state.Invalid(false, REJECT_INVALID, "bad-txn-immature-bmm-request");
+        if (drivechainsEnabled) {
+            for (const CTxIn& txin : tx.vin) {
+                const CCoins *coins = view.AccessCoins(txin.prevout.hash);
+                if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
+                    // Check maturity
+                    if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
+                        return state.Invalid(false, REJECT_INVALID, "bad-txn-immature-bmm-request");
 
-                fSpendsBMMRequest = true;
-                break;
+                    fSpendsBMMRequest = true;
+                    break;
+                }
             }
         }
 
@@ -1244,10 +1253,12 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 const CCoins* coins = inputs.AccessCoins(prevout.hash);
                 assert(coins);
 
-                // Check BMM h* request maturity when trying to spend
-                if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
-                    if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
-                        return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-bmm-request");
+                if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus())) {
+                    // Check BMM h* request maturity when trying to spend
+                    if (coins->fCriticalData && coins->criticalData.IsBMMRequest()) {
+                        if (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)
+                            return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-bmm-request");
+                    }
                 }
 
                 // Verify signature
@@ -1677,6 +1688,8 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
         flags |= SCRIPT_VERIFY_NULLDUMMY;
     }
 
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
     LogPrint(BCLog::BENCH, "    - Fork checks: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeForks * 0.000001);
 
@@ -1761,31 +1774,32 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
          * M6: (Drivechain Withdrawal): A withdrawal will decrease the amount of coins
          * held in the CTIP output of the sidechain.
          */
+        if (drivechainsEnabled)
+        {
+            if (fSidechainInputs) {
+                // We must get the B-WT^ hash as work is applied to
+                // WT^ before inputs and the change output are known.
+                uint256 hashBWT;
+                if (!tx.GetBWTHash(hashBWT))
+                    return error("ConnectBlock(): WT^ (full id): %s has invalid format", tx.GetHash().ToString());
 
-
-        if (fSidechainInputs) {
-            // We must get the B-WT^ hash as work is applied to
-            // WT^ before inputs and the change output are known.
-            uint256 hashBWT;
-            if (!tx.GetBWTHash(hashBWT))
-                return error("ConnectBlock(): WT^ (full id): %s has invalid format", tx.GetHash().ToString());
-
-            // Check workscore TODO nSidechain
-            if (!scdb.CheckWorkScore(nSidechain, hashBWT))
-                return error("ConnectBlock(): CheckWorkScore failed for %s", hashBWT.ToString());
-        }
-
-        if (!tx.IsCoinBase() && !fJustCheck) {
-            // Check for sidechain deposits
-            bool fSidechainOutput = false;
-            for (const CTxOut out : tx.vout) {
-                const CScript& scriptPubKey = out.scriptPubKey;
-                if (ValidSidechainField.find(HexStr(scriptPubKey)) != ValidSidechainField.end()) {
-                    fSidechainOutput = true;
-                }
+                // Check workscore TODO nSidechain
+                if (!scdb.CheckWorkScore(nSidechain, hashBWT))
+                    return error("ConnectBlock(): CheckWorkScore failed for %s", hashBWT.ToString());
             }
-            if (fSidechainOutput)
-                vDepositTx.push_back(tx);
+
+            if (!tx.IsCoinBase() && !fJustCheck) {
+                // Check for sidechain deposits
+                bool fSidechainOutput = false;
+                for (const CTxOut out : tx.vout) {
+                    const CScript& scriptPubKey = out.scriptPubKey;
+                    if (ValidSidechainField.find(HexStr(scriptPubKey)) != ValidSidechainField.end()) {
+                        fSidechainOutput = true;
+                    }
+                }
+                if (fSidechainOutput)
+                    vDepositTx.push_back(tx);
+            }
         }
 
         CTxUndo undoDummy;
@@ -1841,7 +1855,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
 
-    if (vDepositTx.size())
+    if (drivechainsEnabled && vDepositTx.size())
         scdb.AddDeposits(vDepositTx);
 
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
@@ -2615,8 +2629,11 @@ static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& sta
         pindexNew->nStatus |= BLOCK_OPT_WITNESS;
     }
 
-    // Update coinbase cache if we should
-    if (chainActive.Height() >= COINBASE_CACHE_HEIGHT) {
+    // Update coinbase cache
+       // std::cout << "Validation.cpp should be calling scdb.update 0\n";
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        std::cout << "Validation.cpp should be calling scdb.update 1\n";
         pindexNew->fCoinbase = true;
         pindexNew->coinbase = block.vtx[0];
         nCoinbaseCached++;
@@ -2850,6 +2867,12 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa
     return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_SEGWIT, versionbitscache) == THRESHOLD_ACTIVE);
 }
 
+bool IsDrivechainEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
+{
+    LOCK(cs_main); // TODO is this needed?
+    return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_DRIVECHAINS, versionbitscache) == THRESHOLD_ACTIVE);
+}
+
 // Compute at which vout of the block's coinbase transaction the witness
 // commitment occurs, or -1 if not found.
 static int GetWitnessCommitmentIndex(const CBlock& block)
@@ -2916,40 +2939,40 @@ void GenerateCriticalHashCommitment(CBlock& block, const Consensus::Params& cons
     if (block.vtx.size() < 2)
         return;
 
-    // TODO
-    // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
-    //
-    // TODO
-    // Combine BMM request commits into one output. Other non BMM request
-    // commits could also be combined.
-    std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block);
-    std::vector<CTxOut> vout;
-    for (const CCriticalData& d : vCriticalData) {
-        CTxOut out;
-        out.nValue = 0;
-        out.scriptPubKey.resize(38);
-        out.scriptPubKey[0] = OP_RETURN;
-        out.scriptPubKey[1] = 0x24;
-        out.scriptPubKey[2] = 0xD1;
-        out.scriptPubKey[3] = 0x61;
-        out.scriptPubKey[4] = 0x73;
-        out.scriptPubKey[5] = 0x68;
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        // TODO
+        // Combine BMM request commits into one output. Other non BMM request
+        // commits could also be combined.
+        std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block);
+        std::vector<CTxOut> vout;
+        for (const CCriticalData& d : vCriticalData) {
+            CTxOut out;
+            out.nValue = 0;
+            out.scriptPubKey.resize(38);
+            out.scriptPubKey[0] = OP_RETURN;
+            out.scriptPubKey[1] = 0x24;
+            out.scriptPubKey[2] = 0xD1;
+            out.scriptPubKey[3] = 0x61;
+            out.scriptPubKey[4] = 0x73;
+            out.scriptPubKey[5] = 0x68;
 
-        memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
+            memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
 
-        // Add bytes (optional)
-        if (!d.bytes.empty())
-            out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
+            // Add bytes (optional)
+            if (!d.bytes.empty())
+                out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
 
-        vout.push_back(out);
-    }
+            vout.push_back(out);
+        }
 
-    // Update coinbase in block
-    if (!vout.empty()) {
-        CMutableTransaction mtx(*block.vtx[0]);
-        for (const CTxOut& o : vout)
-            mtx.vout.push_back(o);
-        block.vtx[0] = MakeTransactionRef(std::move(mtx));
+        // Update coinbase in block
+        if (!vout.empty()) {
+            CMutableTransaction mtx(*block.vtx[0]);
+            for (const CTxOut& o : vout)
+                mtx.vout.push_back(o);
+            block.vtx[0] = MakeTransactionRef(std::move(mtx));
+        }
     }
 }
 
@@ -2960,44 +2983,44 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
      * Example Lightning version of Drivechain BMM commitment request.
      * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
      */
-    // TODO
-    // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
-    //
-    // TODO
-    std::vector<CCriticalData> vCriticalData; // = GetLNBMMRequests();
-    std::vector<CTxOut> vout;
-    for (const CCriticalData& d : vCriticalData) {
-        CTxOut out;
-        out.nValue = 0;
-        out.scriptPubKey.resize(70);
-        out.scriptPubKey[0] = OP_RETURN;
-        out.scriptPubKey[1] = 0x44;
-        out.scriptPubKey[2] = 0xD0;
-        out.scriptPubKey[3] = 0x52;
-        out.scriptPubKey[4] = 0x0C;
-        out.scriptPubKey[5] = 0x6E;
-
-        // Add side:block hash
-        memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
-
-        // Add previous side:block hash
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
         // TODO
-        uint256 prevBlockHash = uint256(); // d.prevBlockHash
-        memcpy(&out.scriptPubKey[39], &prevBlockHash, 32);
+        std::vector<CCriticalData> vCriticalData; // = GetLNBMMRequests();
+        std::vector<CTxOut> vout;
+        for (const CCriticalData& d : vCriticalData) {
+            CTxOut out;
+            out.nValue = 0;
+            out.scriptPubKey.resize(70);
+            out.scriptPubKey[0] = OP_RETURN;
+            out.scriptPubKey[1] = 0x44;
+            out.scriptPubKey[2] = 0xD0;
+            out.scriptPubKey[3] = 0x52;
+            out.scriptPubKey[4] = 0x0C;
+            out.scriptPubKey[5] = 0x6E;
 
-        // Add bytes (optional)
-        if (!d.bytes.empty())
-            out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
+            // Add side:block hash
+            memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
 
-        vout.push_back(out);
-    }
+            // Add previous side:block hash
+            // TODO
+            uint256 prevBlockHash = uint256(); // d.prevBlockHash
+            memcpy(&out.scriptPubKey[39], &prevBlockHash, 32);
 
-    // Update coinbase in block
-    if (!vout.empty()) {
-        CMutableTransaction mtx(*block.vtx[0]);
-        for (const CTxOut& o : vout)
-            mtx.vout.push_back(o);
-        block.vtx[0] = MakeTransactionRef(std::move(mtx));
+            // Add bytes (optional)
+            if (!d.bytes.empty())
+                out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
+
+            vout.push_back(out);
+        }
+
+        // Update coinbase in block
+        if (!vout.empty()) {
+            CMutableTransaction mtx(*block.vtx[0]);
+            for (const CTxOut& o : vout)
+                mtx.vout.push_back(o);
+            block.vtx[0] = MakeTransactionRef(std::move(mtx));
+        }
     }
 }
 
@@ -3008,33 +3031,33 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const Consensus::Params
      * Sidechain DB data once per block hashMerkleRoot commitment.
      * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
      */
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        if (!scdb.HasState())
+            return;
 
-    // TODO
-    // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
-    if (!scdb.HasState())
-        return;
+        // Create output that commitment will be added to
+        CTxOut out;
+        out.nValue = 0;
 
-    // Create output that commitment will be added to
-    CTxOut out;
-    out.nValue = 0;
+        // Add script header
+        out.scriptPubKey.resize(38);
+        out.scriptPubKey[0] = OP_RETURN;
+        out.scriptPubKey[1] = 0x24;
+        out.scriptPubKey[2] = 0xD2;
+        out.scriptPubKey[3] = 0x8E;
+        out.scriptPubKey[4] = 0x50;
+        out.scriptPubKey[5] = 0x8C;
 
-    // Add script header
-    out.scriptPubKey.resize(38);
-    out.scriptPubKey[0] = OP_RETURN;
-    out.scriptPubKey[1] = 0x24;
-    out.scriptPubKey[2] = 0xD2;
-    out.scriptPubKey[3] = 0x8E;
-    out.scriptPubKey[4] = 0x50;
-    out.scriptPubKey[5] = 0x8C;
+        // Add SCDB hashMerkleRoot
+        uint256 hashMerkleRoot = scdb.GetSCDBHash();
+        memcpy(&out.scriptPubKey[6], &hashMerkleRoot, 32);
 
-    // Add SCDB hashMerkleRoot
-    uint256 hashMerkleRoot = scdb.GetSCDBHash();
-    memcpy(&out.scriptPubKey[6], &hashMerkleRoot, 32);
-
-    // Update coinbase in block
-    CMutableTransaction mtx(*block.vtx[0]);
-    mtx.vout.push_back(out);
-    block.vtx[0] = MakeTransactionRef(std::move(mtx));
+        // Update coinbase in block
+        CMutableTransaction mtx(*block.vtx[0]);
+        mtx.vout.push_back(out);
+        block.vtx[0] = MakeTransactionRef(std::move(mtx));
+    }
 }
 
 void GenerateBMMHashMerkleRootCommitment(CBlock& block, const Consensus::Params& consensusParams)
@@ -3044,63 +3067,67 @@ void GenerateBMMHashMerkleRootCommitment(CBlock& block, const Consensus::Params&
      * Drivechain BMM linking data once per block hashMerkleRoot commitment.
      * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
      */
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        if (!scdb.HasState())
+            return;
 
-    // TODO
-    // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
-    if (!scdb.HasState())
-        return;
+        // Create output that commitment will be added to
+        CTxOut out;
+        out.nValue = 0;
 
-    // Create output that commitment will be added to
-    CTxOut out;
-    out.nValue = 0;
+        // Add script header
+        out.scriptPubKey.resize(38);
+        out.scriptPubKey[0] = OP_RETURN;
+        out.scriptPubKey[1] = 0x24;
+        out.scriptPubKey[2] = 0xD3;
+        out.scriptPubKey[3] = 0x40;
+        out.scriptPubKey[4] = 0x70;
+        out.scriptPubKey[5] = 0x53;
 
-    // Add script header
-    out.scriptPubKey.resize(38);
-    out.scriptPubKey[0] = OP_RETURN;
-    out.scriptPubKey[1] = 0x24;
-    out.scriptPubKey[2] = 0xD3;
-    out.scriptPubKey[3] = 0x40;
-    out.scriptPubKey[4] = 0x70;
-    out.scriptPubKey[5] = 0x53;
+        // Add BMM hashMerkleRoot
+        uint256 hashMerkleRoot = scdb.GetBMMHash();
+        memcpy(&out.scriptPubKey[6], &hashMerkleRoot, 32);
 
-    // Add BMM hashMerkleRoot
-    uint256 hashMerkleRoot = scdb.GetBMMHash();
-    memcpy(&out.scriptPubKey[6], &hashMerkleRoot, 32);
-
-    // Update coinbase in block
-    CMutableTransaction mtx(*block.vtx[0]);
-    mtx.vout.push_back(out);
-    block.vtx[0] = MakeTransactionRef(std::move(mtx));
+        // Update coinbase in block
+        CMutableTransaction mtx(*block.vtx[0]);
+        mtx.vout.push_back(out);
+        block.vtx[0] = MakeTransactionRef(std::move(mtx));
+    }
 }
 
-CScript GenerateWTPrimeHashCommitment(const uint256& hashWTPrime, const uint8_t nSidechain)
+void GenerateWTPrimeHashCommitment(const uint256& hashWTPrime, const uint8_t nSidechain, CBlock& block, const Consensus::Params& consensusParams)
 {
     /*
      * M3
      * Drivechain WT^ commit message "Propose Withdrawal".
      * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
      */
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        CTxOut out;
+        out.nValue = 0;
 
-    // TODO
-    // check consensusParams.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS]
-    CScript script;
+        // Add script header
+        out.scriptPubKey.resize(38);
+        out.scriptPubKey[0] = OP_RETURN;
+        out.scriptPubKey[1] = 0x24;
+        out.scriptPubKey[2] = 0xD4;
+        out.scriptPubKey[3] = 0x5A;
+        out.scriptPubKey[4] = 0xA9;
+        out.scriptPubKey[5] = 0x43;
 
-    // Add script header
-    script.resize(38);
-    script[0] = OP_RETURN;
-    script[1] = 0x24;
-    script[2] = 0xD4;
-    script[3] = 0x5A;
-    script[4] = 0xA9;
-    script[5] = 0x43;
+        // Add WT^ hash
+        memcpy(&out.scriptPubKey[6], &hashWTPrime, 32);
 
-    // Add WT^ hash
-    memcpy(&script[6], &hashWTPrime, 32);
+        // Add nSidechain
+        out.scriptPubKey << CScriptNum(nSidechain);
 
-    // Add nSidechain
-    script << CScriptNum(nSidechain);
-
-    return script;
+        // Update coinbase in block
+        CMutableTransaction mtx(*block.vtx[0]);
+        mtx.vout.push_back(out);
+        block.vtx[0] = MakeTransactionRef(std::move(mtx));
+    }
 }
 
 std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block)
@@ -3110,9 +3137,12 @@ std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block)
     if (block.vtx.size() < 2)
         return vCriticalData;
 
-    for (const CTransactionRef& tx : block.vtx) {
-        if (!tx->criticalData.IsNull()) {
-            vCriticalData.push_back(tx->criticalData);
+    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
+    {
+        for (const CTransactionRef& tx : block.vtx) {
+            if (!tx->criticalData.IsNull()) {
+                vCriticalData.push_back(tx->criticalData);
+            }
         }
     }
     return vCriticalData;
@@ -3223,9 +3253,12 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
-
     // Check critical data transactions (outputs, not spending)
-    if (true /* TODO versionbits */) {
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+    if (drivechainsEnabled) {
+        // Track existence of BMM h* commit requests per sidechain
+        std::vector<bool> vSidechainBMM;
+        vSidechainBMM.resize(ValidSidechains.size());
         for (const auto& tx: block.vtx) {
             // Look for transactions with non-null CCriticalData
             if (!tx->criticalData.IsNull()) {
@@ -3251,8 +3284,17 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co
                     }
                 }
                 // Did we find hashCritical?
-                if (!fFound) {
+                if (!fFound)
                     return state.DoS(100, false, REJECT_INVALID, "bad-critical-data-no-commit", true, strprintf("%s : no commit found for critical data", __func__));
+
+                // Enforce 1 BMM h* per sidechain per block
+                uint8_t nSidechain;
+                uint16_t nPrevBlockRef;
+                if (tx->criticalData.IsBMMRequest(nSidechain, nPrevBlockRef)) {
+                    if (vSidechainBMM[nSidechain] == false)
+                        vSidechainBMM[nSidechain] = true;
+                    else
+                        return state.DoS(100, false, REJECT_INVALID, "bad-critical-data-multiple-bmm-for-sidechain", true, strprintf("%s : Multiple BMM h* requests for a single Sidechain", __func__));
                 }
             }
         }

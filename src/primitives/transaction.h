@@ -207,19 +207,9 @@ public:
         return (bytes.empty() && hashCritical.IsNull());
     }
 
-    bool IsBMMRequest() const
-    {
-        // Check for h* commit flag in critical data bytes
-        if (IsNull())
-            return false;
-        if (bytes.size() < 4)
-            return false;
-
-        if (bytes[0] == 0x00 && bytes[1] == 0xbf && bytes[2] == 0x00)
-            return true;
-
-        return false;
-    }
+    // TODO Move?
+    bool IsBMMRequest() const;
+    bool IsBMMRequest(uint8_t& nSidechain, uint16_t& nPrevBlockRef) const;
 
     friend bool operator==(const CCriticalData& a, const CCriticalData& b)
     {
