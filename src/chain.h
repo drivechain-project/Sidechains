@@ -24,9 +24,6 @@ static const int COINBASE_CACHE_TARGET = 2600;
 /** How many blocks to wait between pruning */
 static const int COINBASE_CACHE_PRUNE_DELAY = 50;
 
-/** Block height to begin caching coinbases (BMM activation height) */
-static const int COINBASE_CACHE_HEIGHT = 0;
-
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.

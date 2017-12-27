@@ -5,6 +5,8 @@
 
 #include "txmempool.h"
 
+#include "chain.h"
+#include "chainparams.h"
 #include "consensus/consensus.h"
 #include "consensus/tx_verify.h"
 #include "consensus/validation.h"
@@ -546,7 +548,8 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
                     continue;
                 const CCoins *coins = pcoins->AccessCoins(txin.prevout.hash);
                 if (nCheckFrequency != 0) assert(coins);
-                if (!coins || (coins->fCriticalData && (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY))) {
+                bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+                if (!coins || (drivechainsEnabled && (coins->fCriticalData && (scdb.CountBlocksAtop(coins->criticalData) < BMM_REQUEST_MATURITY)))) {
                     txToRemove.insert(it);
                     break;
                 }

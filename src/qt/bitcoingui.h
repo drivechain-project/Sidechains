@@ -25,6 +25,7 @@ class OptionsModel;
 class PlatformStyle;
 class RPCConsole;
 class SendCoinsRecipient;
+class SidechainTableDialog;
 class UnitDisplayStatusBarControl;
 class WalletFrame;
 class WalletModel;
@@ -113,6 +114,7 @@ private:
     QAction *openRPCConsoleAction;
     QAction *openAction;
     QAction *showHelpMessageAction;
+    QAction *showSidechainTableDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -126,6 +128,9 @@ private:
     int spinnerFrame;
 
     const PlatformStyle *platformStyle;
+
+    /** Sidechain table dialog (for testing) */
+    SidechainTableDialog *sidechainTableDialog;
 
     /** Create the main UI actions. */
     void createActions();
@@ -218,6 +223,8 @@ private Q_SLOTS:
     void showDebugWindow();
     /** Show debug window and set focus to the console */
     void showDebugWindowActivateConsole();
+    /** Show sidechain table dialog */
+    void showSidechainTableDialog();
     /** Show help message dialog */
     void showHelpMessageClicked();
 #ifndef Q_OS_MAC

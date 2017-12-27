@@ -6,6 +6,7 @@
 #include "primitives/transaction.h"
 
 #include "hash.h"
+#include "sidechain.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
@@ -141,4 +142,49 @@ std::string CTransaction::ToString() const
 int64_t GetTransactionWeight(const CTransaction& tx)
 {
     return ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * (WITNESS_SCALE_FACTOR -1) + ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
+}
+
+bool CCriticalData::IsBMMRequest() const
+{
+    uint8_t nSidechain;
+    uint16_t nPrevBlockRef;
+
+    return IsBMMRequest(nSidechain, nPrevBlockRef);
+}
+
+bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, uint16_t& nPrevBlockRef) const
+{
+    // Check for h* commit flag in critical data bytes
+    if (IsNull())
+        return false;
+    if (bytes.size() < 4)
+        return false;
+
+    if (bytes[0] != 0x00 || bytes[1] != 0xbf || bytes[2] != 0x00)
+        return false;
+
+    // Convert bytes to script for easy parsing
+    CScript script(bytes.begin(), bytes.end());
+
+    // Get nSidechain
+    CScript::const_iterator psidechain = script.begin() + 3;
+    opcodetype opcode;
+    std::vector<unsigned char> vchSidechain;
+    if (!script.GetOp(psidechain, opcode, vchSidechain))
+        return false;
+
+    // Is nSidechain valid?
+    nSidechain = CScriptNum(vchSidechain, true).getint();
+    if (!IsSidechainNumberValid(nSidechain))
+        return false;
+
+    // Get prevBlockRef
+    CScript::const_iterator pprevblock = psidechain + vchSidechain.size() + 1;
+    std::vector<unsigned char> vchPrevBlockRef;
+    if (!script.GetOp(pprevblock, opcode, vchPrevBlockRef))
+        return false;
+
+    nPrevBlockRef = CScriptNum(vchPrevBlockRef, true).getint();
+
+    return true;
 }
