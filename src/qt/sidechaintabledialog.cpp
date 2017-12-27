@@ -1,7 +1,10 @@
 #include "sidechaintabledialog.h"
 #include "ui_sidechaintabledialog.h"
 
+#include "chain.h"
+#include "chainparams.h"
 #include "sidechainescrowtablemodel.h"
+#include "validation.h"
 
 SidechainTableDialog::SidechainTableDialog(QWidget *parent) :
     QDialog(parent),
@@ -13,6 +16,13 @@ SidechainTableDialog::SidechainTableDialog(QWidget *parent) :
 
     ui->tableViewD1->setModel(sidechainTableModel);
     ui->tableViewD1->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+    if (!drivechainsEnabled) {
+        ui->pushButtonRefresh->setEnabled(false);
+        ui->pushButtonReset->setEnabled(false);
+        ui->pushButtonRunSimulation->setEnabled(false);
+    }
 }
 
 SidechainTableDialog::~SidechainTableDialog()

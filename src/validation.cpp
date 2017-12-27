@@ -1718,7 +1718,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
         uint8_t nSidechain = 0;
         if (!tx.IsCoinBase())
         {
-            if (!view.HaveInputs(tx, &fSidechainInputs, &nSidechain))
+            if (!view.HaveInputs(tx, (drivechainsEnabled ? &fSidechainInputs : NULL), &nSidechain))
                 return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
 
@@ -2630,10 +2630,8 @@ static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& sta
     }
 
     // Update coinbase cache
-       // std::cout << "Validation.cpp should be calling scdb.update 0\n";
     if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus()))
     {
-        std::cout << "Validation.cpp should be calling scdb.update 1\n";
         pindexNew->fCoinbase = true;
         pindexNew->coinbase = block.vtx[0];
         nCoinbaseCached++;

@@ -1549,8 +1549,10 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
     }
 
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
+
     // Synchronize SCDB
-    if (chainActive.Tip() && chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen())
+    if (drivechainsEnabled && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
     {
         // Find out how many blocks we need to update SCDB
         const int nHeight = chainActive.Height();
@@ -1714,10 +1716,11 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
         pwalletMain->postInitProcess(scheduler);
 #endif
 
+    if (drivechainsEnabled)
+    {
 #ifdef ENABLE_WALLET
     {
         // TODO move this
-        // Only watching test sidechain until others exist.
         if (pwalletMain) {
             LOCK(pwalletMain->cs_wallet);
 
@@ -1739,6 +1742,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
     }
 #endif
+    }
 
     return !fRequestShutdown;
 }
