@@ -66,7 +66,10 @@
      <item>
       <widget class="QValidatedLineEdit" name="payTo">
        <property name="toolTip">
-        <string>The Bitcoin address to send the payment to</string>
+        <string>The Sidechain Address to send the payment</string>
+       </property>
+        <property name="styleSheet">
+         <string>margin-right: 5px;</string>
        </property>
        <property name="text">
         <string/>
@@ -130,12 +133,12 @@
   <customwidget>
    <class>QValidatedLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>qvalidatedlineedit.h</header>
+   <header>qt/qvalidatedlineedit.h</header>
   </customwidget>
   <customwidget>
    <class>BitcoinAmountField</class>
    <extends>QLineEdit</extends>
-   <header>bitcoinamountfield.h</header>
+   <header>qt/bitcoinamountfield.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
