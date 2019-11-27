@@ -25,8 +25,8 @@ static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8
 //! Sidechain build commit hash
 static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "e0da09fcc3db3715e52f236ba1d849b36496e86c";
 
-static const int MAINCHAIN_WTPRIME_VERIFICATION_PERIOD = 300;
-static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
+static const int MAINCHAIN_WTPRIME_VERIFICATION_PERIOD = 32;
+static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 16;
 
 struct Sidechain {
     uint8_t nSidechain;
