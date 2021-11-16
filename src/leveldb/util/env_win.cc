@@ -734,7 +734,7 @@ void Win32Env::Schedule( void (*function)(void* arg), void* arg )
 {
     QueueUserWorkItem(Win32::WorkItemWrapperProc,
                       new Win32::WorkItemWrapper(function,arg),
-                      WITHDRAWAL_EXECUTEDEFAULT);
+                      WT_EXECUTEDEFAULT);
 }
 
 void Win32Env::StartThread( void (*function)(void* arg), void* arg )
