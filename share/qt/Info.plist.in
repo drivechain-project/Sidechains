@@ -29,16 +29,16 @@
   <string>????</string>
 
   <key>CFBundleExecutable</key>
-  <string>Bitcoin-Qt</string>
-  
+  <string>testchain-Qt</string>
+
   <key>CFBundleName</key>
-  <string>Bitcoin-Qt</string>
+  <string>testchain-Qt</string>
 
   <key>LSHasLocalizedDisplayName</key>
   <true/>
 
   <key>CFBundleIdentifier</key>
-  <string>org.bitcoinfoundation.Bitcoin-Qt</string>
+  <string>org.bitcoinfoundation.testchain-Qt</string>
 
   <key>CFBundleURLTypes</key>
   <array>
@@ -99,7 +99,7 @@
 
   <key>LSAppNapIsDisabled</key>
     <string>True</string>
-  
+
   <key>LSApplicationCategoryType</key>
     <string>public.app-category.finance</string>
 </dict>
