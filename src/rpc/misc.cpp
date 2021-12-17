@@ -669,7 +669,7 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("reorg", fReorg);
-    result.pushKV("disconnected", vDisconnected.size());
+    result.pushKV("disconnected", (uint64_t)vDisconnected.size());
     result.pushKV("cached", nCachedResult - nCached);
     result.pushKV("cachesize", nCachedResult);
 
