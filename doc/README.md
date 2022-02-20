@@ -16,7 +16,7 @@ The following are some helpful notes on how to run Bitcoin on your native platfo
 Unpack the files into a directory and run:
 
 - `bin/bitcoin-qt` (GUI) or
-- `bin/testchaind` (headless)
+- `bin/bitassetsd` (headless)
 
 ### Windows
 

@@ -1317,7 +1317,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You have configuration files for the mainchain and this sidechain, but have failed to connect to the mainchain. &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Please check that the mainchain is running! &lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You also may have not restarted this sidechain (Testchain) or the mainchain (DriveNet) to apply configuration or have changed configuration settings incorrectly.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You have configuration files for the mainchain and this sidechain, but have failed to connect to the mainchain. &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Please check that the mainchain is running! &lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You also may have not restarted this sidechain (BitAssets) or the mainchain (DriveNet) to apply configuration or have changed configuration settings incorrectly.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>

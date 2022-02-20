@@ -17,13 +17,13 @@ BEGIN
         BLOCK "040904E4" // U.S. English - multilingual (hex)
         BEGIN
             VALUE "CompanyName",        "Bitcoin"
-            VALUE "FileDescription",    "testchain-cli (JSON-RPC client for " PACKAGE_NAME ")"
+            VALUE "FileDescription",    "bitassets-cli (JSON-RPC client for " PACKAGE_NAME ")"
             VALUE "FileVersion",        VER_FILEVERSION_STR
-            VALUE "InternalName",       "testchain-cli"
+            VALUE "InternalName",       "bitassets-cli"
             VALUE "LegalCopyright",     COPYRIGHT_STR
             VALUE "LegalTrademarks1",   "Distributed under the MIT software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
-            VALUE "OriginalFilename",   "testchain-cli.exe"
-            VALUE "ProductName",        "testchain-cli"
+            VALUE "OriginalFilename",   "bitassets-cli.exe"
+            VALUE "ProductName",        "bitassets-cli"
             VALUE "ProductVersion",     VER_PRODUCTVERSION_STR
         END
     END

@@ -27,13 +27,13 @@ Source1:	http://download.oracle.com/berkeley-db/db-%{bdbv}.NC.tar.gz
 Source10:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/contrib/debian/examples/bitcoin.conf
 
 #man pages
-Source20:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/testchaind.1
-Source21:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/testchain-cli.1
-Source22:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/testchain-qt.1
+Source20:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/bitassetsd.1
+Source21:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/bitassets-cli.1
+Source22:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/doc/man/bitassets-qt.1
 
 #selinux
 Source30:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/contrib/rpm/bitcoin.te
-# Source31 - what about testchain-tx and bench_bitcoin ???
+# Source31 - what about bitassets-tx and bench_bitcoin ???
 Source31:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/contrib/rpm/bitcoin.fc
 Source32:	https://raw.githubusercontent.com/bitcoin/bitcoin/v%{version}/contrib/rpm/bitcoin.if
 
@@ -141,8 +141,8 @@ Group:		Applications/System
 This package provides several command line utilities for interacting with a
 bitcoin-core daemon.
 
-The testchain-cli utility allows you to communicate and control a bitcoin daemon
-over RPC, the testchain-tx utility allows you to create a custom transaction, and
+The bitassets-cli utility allows you to communicate and control a bitcoin daemon
+over RPC, the bitassets-tx utility allows you to create a custom transaction, and
 the bench_bitcoin utility can be used to perform some benchmarks.
 
 This package contains utilities needed by the bitcoin-server package.
@@ -182,12 +182,12 @@ popd
 make install DESTDIR=%{buildroot}
 
 mkdir -p -m755 %{buildroot}%{_sbindir}
-mv %{buildroot}%{_bindir}/testchaind %{buildroot}%{_sbindir}/testchaind
+mv %{buildroot}%{_bindir}/bitassetsd %{buildroot}%{_sbindir}/bitassetsd
 
 # systemd stuff
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cat <<EOF > %{buildroot}%{_tmpfilesdir}/bitcoin.conf
-d /run/testchaind 0750 bitcoin bitcoin -
+d /run/bitassetsd 0750 bitcoin bitcoin -
 EOF
 touch -a -m -t 201504280000 %{buildroot}%{_tmpfilesdir}/bitcoin.conf
 
@@ -202,7 +202,7 @@ OPTIONS=""
 # Don't change these unless you know what you're doing.
 CONFIG_FILE="%{_sysconfdir}/bitcoin/bitcoin.conf"
 DATA_DIR="%{_localstatedir}/lib/bitcoin"
-PID_FILE="/run/testchaind/testchaind.pid"
+PID_FILE="/run/bitassetsd/bitassetsd.pid"
 EOF
 touch -a -m -t 201504280000 %{buildroot}%{_sysconfdir}/sysconfig/bitcoin
 
@@ -214,7 +214,7 @@ After=syslog.target network.target
 
 [Service]
 Type=forking
-ExecStart=%{_sbindir}/testchaind -daemon -conf=\${CONFIG_FILE} -datadir=\${DATA_DIR} -pid=\${PID_FILE} \$OPTIONS
+ExecStart=%{_sbindir}/bitassetsd -daemon -conf=\${CONFIG_FILE} -datadir=\${DATA_DIR} -pid=\${PID_FILE} \$OPTIONS
 EnvironmentFile=%{_sysconfdir}/sysconfig/bitcoin
 User=bitcoin
 Group=bitcoin
@@ -300,10 +300,10 @@ touch -a -m -t 201511100546 %{buildroot}%{_datadir}/kde4/services/bitcoin-core.p
 %endif
 
 # man pages
-install -D -p %{SOURCE20} %{buildroot}%{_mandir}/man1/testchaind.1
-install -p %{SOURCE21} %{buildroot}%{_mandir}/man1/testchain-cli.1
+install -D -p %{SOURCE20} %{buildroot}%{_mandir}/man1/bitassetsd.1
+install -p %{SOURCE21} %{buildroot}%{_mandir}/man1/bitassets-cli.1
 %if %{_buildqt}
-install -p %{SOURCE22} %{buildroot}%{_mandir}/man1/testchain-qt.1
+install -p %{SOURCE22} %{buildroot}%{_mandir}/man1/bitassets-qt.1
 %endif
 
 # nuke these, we do extensive testing of binaries in %%check before packaging
@@ -384,7 +384,7 @@ rm -rf %{buildroot}
 %attr(0644,root,root) %{_datadir}/pixmaps/*.svg
 %attr(0644,root,root) %{_datadir}/pixmaps/*.png
 %attr(0644,root,root) %{_datadir}/pixmaps/*.xpm
-%attr(0644,root,root) %{_mandir}/man1/testchain-qt.1*
+%attr(0644,root,root) %{_mandir}/man1/bitassets-qt.1*
 %endif
 
 %files libs
@@ -407,23 +407,23 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %license COPYING db-%{bdbv}.NC-LICENSE
 %doc COPYING bitcoin.conf.example doc/README.md doc/REST-interface.md doc/bips.md doc/dnsseed-policy.md doc/files.md doc/reduce-traffic.md doc/release-notes.md doc/tor.md
-%attr(0755,root,root) %{_sbindir}/testchaind
+%attr(0755,root,root) %{_sbindir}/bitassetsd
 %attr(0644,root,root) %{_tmpfilesdir}/bitcoin.conf
 %attr(0644,root,root) %{_unitdir}/bitcoin.service
 %dir %attr(0750,bitcoin,bitcoin) %{_sysconfdir}/bitcoin
 %dir %attr(0750,bitcoin,bitcoin) %{_localstatedir}/lib/bitcoin
 %config(noreplace) %attr(0600,root,root) %{_sysconfdir}/sysconfig/bitcoin
 %attr(0644,root,root) %{_datadir}/selinux/*/*.pp
-%attr(0644,root,root) %{_mandir}/man1/testchaind.1*
+%attr(0644,root,root) %{_mandir}/man1/bitassetsd.1*
 
 %files utils
 %defattr(-,root,root,-)
 %license COPYING
 %doc COPYING bitcoin.conf.example doc/README.md
-%attr(0755,root,root) %{_bindir}/testchain-cli
-%attr(0755,root,root) %{_bindir}/testchain-tx
+%attr(0755,root,root) %{_bindir}/bitassets-cli
+%attr(0755,root,root) %{_bindir}/bitassets-tx
 %attr(0755,root,root) %{_bindir}/bench_bitcoin
-%attr(0644,root,root) %{_mandir}/man1/testchain-cli.1*
+%attr(0644,root,root) %{_mandir}/man1/bitassets-cli.1*
 
 
 

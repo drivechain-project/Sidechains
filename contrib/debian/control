@@ -30,7 +30,7 @@ Homepage: https://bitcoincore.org/
 Vcs-Git: git://github.com/bitcoin/bitcoin.git
 Vcs-Browser: https://github.com/bitcoin/bitcoin
 
-Package: testchaind
+Package: bitassetsd
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: peer-to-peer network based digital currency - daemon
@@ -40,8 +40,8 @@ Description: peer-to-peer network based digital currency - daemon
  transact directly with each other, with the help of a P2P network to
  check for double-spending.
  .
- This package provides the daemon, testchaind, and the CLI tool
- testchain-cli to interact with the daemon.
+ This package provides the daemon, bitassetsd, and the CLI tool
+ bitassets-cli to interact with the daemon.
 
 Package: bitcoin-qt
 Architecture: any
@@ -55,7 +55,7 @@ Description: peer-to-peer network based digital currency - Qt GUI
  .
  This package provides Bitcoin-Qt, a GUI for Bitcoin based on Qt.
 
-Package: testchain-tx
+Package: bitassets-tx
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: peer-to-peer digital currency - standalone transaction tool
@@ -65,6 +65,6 @@ Description: peer-to-peer digital currency - standalone transaction tool
  transact directly with each other, with the help of a P2P network to
  check for double-spending.
  .
- This package provides testchain-tx, a command-line transaction creation
+ This package provides bitassets-tx, a command-line transaction creation
  tool which can be used without a bitcoin daemon.  Some means of
  exchanging minimal transaction data with peers is still required.

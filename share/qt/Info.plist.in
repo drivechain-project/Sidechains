@@ -29,16 +29,16 @@
   <string>????</string>
 
   <key>CFBundleExecutable</key>
-  <string>testchain-Qt</string>
+  <string>bitassets-Qt</string>
 
   <key>CFBundleName</key>
-  <string>testchain-Qt</string>
+  <string>bitassets-Qt</string>
 
   <key>LSHasLocalizedDisplayName</key>
   <true/>
 
   <key>CFBundleIdentifier</key>
-  <string>org.bitcoinfoundation.testchain-Qt</string>
+  <string>org.bitcoinfoundation.bitassets-Qt</string>
 
   <key>CFBundleURLTypes</key>
   <array>

@@ -1,36 +1,36 @@
-Sample init scripts and service configuration for testchaind
+Sample init scripts and service configuration for bitassetsd
 ==========================================================
 
 Sample scripts and configuration files for systemd, Upstart and OpenRC
 can be found in the contrib/init folder.
 
-    contrib/init/testchaind.service:    systemd service unit configuration
-    contrib/init/testchaind.openrc:     OpenRC compatible SysV style init script
-    contrib/init/testchaind.openrcconf: OpenRC conf.d file
-    contrib/init/testchaind.conf:       Upstart service configuration file
-    contrib/init/testchaind.init:       CentOS compatible SysV style init script
+    contrib/init/bitassetsd.service:    systemd service unit configuration
+    contrib/init/bitassetsd.openrc:     OpenRC compatible SysV style init script
+    contrib/init/bitassetsd.openrcconf: OpenRC conf.d file
+    contrib/init/bitassetsd.conf:       Upstart service configuration file
+    contrib/init/bitassetsd.init:       CentOS compatible SysV style init script
 
 Service User
 ---------------------------------
 
 All three Linux startup configurations assume the existence of a "bitcoin" user
 and group.  They must be created before attempting to use these scripts.
-The OS X configuration assumes testchaind will be set up for the current user.
+The OS X configuration assumes bitassetsd will be set up for the current user.
 
 Configuration
 ---------------------------------
 
-At a bare minimum, testchaind requires that the rpcpassword setting be set
+At a bare minimum, bitassetsd requires that the rpcpassword setting be set
 when running as a daemon.  If the configuration file does not exist or this
-setting is not set, testchaind will shutdown promptly after startup.
+setting is not set, bitassetsd will shutdown promptly after startup.
 
 This password does not have to be remembered or typed as it is mostly used
-as a fixed token that testchaind and client programs read from the configuration
+as a fixed token that bitassetsd and client programs read from the configuration
 file, however it is recommended that a strong and secure password be used
 as this password is security critical to securing the wallet should the
 wallet be enabled.
 
-If testchaind is run with the "-server" flag (set by default), and no rpcpassword is set,
+If bitassetsd is run with the "-server" flag (set by default), and no rpcpassword is set,
 it will use a special cookie file for authentication. The cookie is generated with random
 content when the daemon starts, and deleted when it exits. Read access to this file
 controls who can access it through RPC.
@@ -38,7 +38,7 @@ controls who can access it through RPC.
 By default the cookie is stored in the data directory, but it's location can be overridden
 with the option '-rpccookiefile'.
 
-This allows for running testchaind without having to do any manual configuration.
+This allows for running bitassetsd without having to do any manual configuration.
 
 `conf`, `pid`, and `wallet` accept relative paths which are interpreted as
 relative to the data directory. `wallet` *only* supports relative paths.
@@ -53,21 +53,21 @@ Paths
 
 All three configurations assume several paths that might need to be adjusted.
 
-Binary:              `/usr/bin/testchaind`  
+Binary:              `/usr/bin/bitassetsd`  
 Configuration file:  `/etc/bitcoin/bitcoin.conf`  
-Data directory:      `/var/lib/testchaind`  
-PID file:            `/var/run/testchaind/testchaind.pid` (OpenRC and Upstart) or `/var/lib/testchaind/testchaind.pid` (systemd)  
-Lock file:           `/var/lock/subsys/testchaind` (CentOS)  
+Data directory:      `/var/lib/bitassetsd`  
+PID file:            `/var/run/bitassetsd/bitassetsd.pid` (OpenRC and Upstart) or `/var/lib/bitassetsd/bitassetsd.pid` (systemd)  
+Lock file:           `/var/lock/subsys/bitassetsd` (CentOS)  
 
 The configuration file, PID directory (if applicable) and data directory
 should all be owned by the bitcoin user and group.  It is advised for security
 reasons to make the configuration file and data directory only readable by the
-bitcoin user and group.  Access to testchain-cli and other testchaind rpc clients
+bitcoin user and group.  Access to bitassets-cli and other bitassetsd rpc clients
 can then be controlled by group membership.
 
 ### Mac OS X
 
-Binary:              `/usr/local/bin/testchaind`  
+Binary:              `/usr/local/bin/bitassetsd`  
 Configuration file:  `~/Library/Application Support/Bitcoin/bitcoin.conf`  
 Data directory:      `~/Library/Application Support/Bitcoin`  
 Lock file:           `~/Library/Application Support/Bitcoin/.lock`  
@@ -81,19 +81,19 @@ Installing this .service file consists of just copying it to
 /usr/lib/systemd/system directory, followed by the command
 `systemctl daemon-reload` in order to update running systemd configuration.
 
-To test, run `systemctl start testchaind` and to enable for system startup run
-`systemctl enable testchaind`
+To test, run `systemctl start bitassetsd` and to enable for system startup run
+`systemctl enable bitassetsd`
 
 ### OpenRC
 
-Rename testchaind.openrc to testchaind and drop it in /etc/init.d.  Double
+Rename bitassetsd.openrc to bitassetsd and drop it in /etc/init.d.  Double
 check ownership and permissions and make it executable.  Test it with
-`/etc/init.d/testchaind start` and configure it to run on startup with
-`rc-update add testchaind`
+`/etc/init.d/bitassetsd start` and configure it to run on startup with
+`rc-update add bitassetsd`
 
 ### Upstart (for Debian/Ubuntu based distributions)
 
-Drop testchaind.conf in /etc/init.  Test by running `service testchaind start`
+Drop bitassetsd.conf in /etc/init.  Test by running `service bitassetsd start`
 it will automatically start on reboot.
 
 NOTE: This script is incompatible with CentOS 5 and Amazon Linux 2014 as they
@@ -101,21 +101,21 @@ use old versions of Upstart and do not supply the start-stop-daemon utility.
 
 ### CentOS
 
-Copy testchaind.init to /etc/init.d/testchaind. Test by running `service testchaind start`.
+Copy bitassetsd.init to /etc/init.d/bitassetsd. Test by running `service bitassetsd start`.
 
-Using this script, you can adjust the path and flags to the testchaind program by
+Using this script, you can adjust the path and flags to the bitassetsd program by
 setting the BITCOIND and FLAGS environment variables in the file
-/etc/sysconfig/testchaind. You can also use the DAEMONOPTS environment variable here.
+/etc/sysconfig/bitassetsd. You can also use the DAEMONOPTS environment variable here.
 
 ### Mac OS X
 
-Copy org.bitcoin.testchaind.plist into ~/Library/LaunchAgents. Load the launch agent by
-running `launchctl load ~/Library/LaunchAgents/org.bitcoin.testchaind.plist`.
+Copy org.bitcoin.bitassetsd.plist into ~/Library/LaunchAgents. Load the launch agent by
+running `launchctl load ~/Library/LaunchAgents/org.bitcoin.bitassetsd.plist`.
 
-This Launch Agent will cause testchaind to start whenever the user logs in.
+This Launch Agent will cause bitassetsd to start whenever the user logs in.
 
-NOTE: This approach is intended for those wanting to run testchaind as the current user.
-You will need to modify org.bitcoin.testchaind.plist if you intend to use it as a
+NOTE: This approach is intended for those wanting to run bitassetsd as the current user.
+You will need to modify org.bitcoin.bitassetsd.plist if you intend to use it as a
 Launch Daemon with a dedicated bitcoin user.
 
 Auto-respawn

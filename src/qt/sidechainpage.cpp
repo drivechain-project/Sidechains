@@ -976,7 +976,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
     // Do we have configuration files for the mainchain & sidechain?
     fs::path pathConfMain = pathDrivenetData / "drivenet.conf";
-    fs::path pathConfSide = pathSide / "testchain.conf";
+    fs::path pathConfSide = pathSide / "bitassets.conf";
 
     // Do drivenet.conf & side.conf exist?
     if (fs::exists(pathConfMain) && fs::exists(pathConfSide))

@@ -1,8 +1,8 @@
-/usr/bin/testchain-cli		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
-/usr/sbin/testchaind		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
-/usr/lib(64)?/bitcoin/testchaind		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
+/usr/bin/bitassets-cli		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
+/usr/sbin/bitassetsd		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
+/usr/lib(64)?/bitcoin/bitassetsd		--	gen_context(system_u:object_r:bitcoin_exec_t,s0)
 
 /etc/bitcoin(/.*)?		gen_context(system_u:object_r:bitcoin_conf_t,s0)
 /var/lib/bitcoin(/.*)?		gen_context(system_u:object_r:bitcoin_var_lib_t,s0)
 
-(/var)?/run/testchaind(/.*)?   gen_context(system_u:object_r:bitcoin_var_run_t,s0)
+(/var)?/run/bitassetsd(/.*)?   gen_context(system_u:object_r:bitcoin_var_run_t,s0)

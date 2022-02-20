@@ -1,15 +1,15 @@
-# bash programmable completion for testchain-tx(1)
+# bash programmable completion for bitassets-tx(1)
 # Copyright (c) 2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-_testchain_tx() {
+_bitassets_tx() {
     local cur prev words=() cword
-    local testchain_tx
+    local bitassets_tx
 
-    # save and use original argument to invoke testchain-tx for -help
+    # save and use original argument to invoke bitassets-tx for -help
     # it might not be in $PATH
-    testchain_tx="$1"
+    bitassets_tx="$1"
 
     COMPREPLY=()
     _get_comp_words_by_ref -n =: cur prev words cword
@@ -27,15 +27,15 @@ _testchain_tx() {
 
     if [[ "$cword" == 1 || ( "$prev" != "-create" && "$prev" == -* ) ]]; then
         # only options (or an uncompletable hex-string) allowed
-        # parse testchain-tx -help for options
+        # parse bitassets-tx -help for options
         local helpopts
-        helpopts=$($testchain_tx -help | sed -e '/^  -/ p' -e d )
+        helpopts=$($bitassets_tx -help | sed -e '/^  -/ p' -e d )
         COMPREPLY=( $( compgen -W "$helpopts" -- "$cur" ) )
     else
         # only commands are allowed
         # parse -help for commands
         local helpcmds
-        helpcmds=$($testchain_tx -help | sed -e '1,/Commands:/d' -e 's/=.*/=/' -e '/^  [a-z]/ p' -e d )
+        helpcmds=$($bitassets_tx -help | sed -e '1,/Commands:/d' -e 's/=.*/=/' -e '/^  [a-z]/ p' -e d )
         COMPREPLY=( $( compgen -W "$helpcmds" -- "$cur" ) )
     fi
 
@@ -46,7 +46,7 @@ _testchain_tx() {
 
     return 0
 } &&
-complete -F _testchain_tx testchain-tx
+complete -F _bitassets_tx bitassets-tx
 
 # Local variables:
 # mode: shell-script

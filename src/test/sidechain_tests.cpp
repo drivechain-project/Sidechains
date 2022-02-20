@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
 
 BOOST_AUTO_TEST_CASE(depositaddress)
 {
-    // Generate a deposit address for testchain (0) and make sure the format
+    // Generate a deposit address for bitassets (0) and make sure the format
     // matches what we expect.
     std::string strDest = "patrick";
 

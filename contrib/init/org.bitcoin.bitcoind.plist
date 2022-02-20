@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.bitcoin.testchaind</string>
+	<string>org.bitcoin.bitassetsd</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/local/bin/testchaind</string>
+		<string>/usr/local/bin/bitassetsd</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

@@ -1,23 +1,23 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
 AC_PREREQ([2.60])
-define(_CLIENT_VERSION_MAJOR, 14)
-define(_CLIENT_VERSION_MINOR, 01)
+define(_CLIENT_VERSION_MAJOR, 1)
+define(_CLIENT_VERSION_MINOR, 00)
 define(_CLIENT_VERSION_REVISION, 00)
 define(_CLIENT_VERSION_BUILD, 0)
 define(_CLIENT_VERSION_IS_RELEASE, false)
-define(_COPYRIGHT_YEAR, 2021)
+define(_COPYRIGHT_YEAR, 2022)
 define(_COPYRIGHT_HOLDERS,[The %s developers])
 define(_COPYRIGHT_HOLDERS_SUBSTITUTION,[[Bitcoin Core]])
-AC_INIT([TestChain],[_CLIENT_VERSION_MAJOR._CLIENT_VERSION_MINOR._CLIENT_VERSION_REVISION],[https://github.com/bitcoin/bitcoin/issues],[sidechains],[https://bitcoincore.org/])
+AC_INIT([BitAssets],[_CLIENT_VERSION_MAJOR._CLIENT_VERSION_MINOR._CLIENT_VERSION_REVISION],[https://github.com/bitcoin/bitcoin/issues],[sidechains],[https://bitcoincore.org/])
 AC_CONFIG_SRCDIR([src/validation.cpp])
 AC_CONFIG_HEADERS([src/config/bitcoin-config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 
-BITCOIN_DAEMON_NAME=testchaind
-BITCOIN_GUI_NAME=testchain-qt
-BITCOIN_CLI_NAME=testchain-cli
-BITCOIN_TX_NAME=testchain-tx
+BITCOIN_DAEMON_NAME=bitassetsd
+BITCOIN_GUI_NAME=bitassets-qt
+BITCOIN_CLI_NAME=bitassets-cli
+BITCOIN_TX_NAME=bitassets-tx
 
 dnl Unless the user specified ARFLAGS, force it to be cr
 AC_ARG_VAR(ARFLAGS, [Flags for the archiver, defaults to <cr> if not set])
@@ -298,7 +298,7 @@ CPPFLAGS="$CPPFLAGS -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS"
 
 AC_ARG_WITH([utils],
   [AS_HELP_STRING([--with-utils],
-  [build testchain-cli testchain-tx (default=yes)])],
+  [build bitassets-cli bitassets-tx (default=yes)])],
   [build_bitcoin_utils=$withval],
   [build_bitcoin_utils=yes])
 
@@ -310,9 +310,9 @@ AC_ARG_WITH([libs],
 
 AC_ARG_WITH([daemon],
   [AS_HELP_STRING([--with-daemon],
-  [build testchaind daemon (default=yes)])],
-  [build_testchaind=$withval],
-  [build_testchaind=yes])
+  [build bitassetsd daemon (default=yes)])],
+  [build_bitassetsd=$withval],
+  [build_bitassetsd=yes])
 
 use_pkgconfig=yes
 case $host in
@@ -756,7 +756,7 @@ BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
 
-if test x$build_bitcoin_utils$build_testchaind$bitcoin_enable_qt$use_tests$use_bench = xnonononono; then
+if test x$build_bitcoin_utils$build_bitassetsd$bitcoin_enable_qt$use_tests$use_bench = xnonononono; then
     use_boost=no
 else
     use_boost=yes
@@ -945,7 +945,7 @@ if test x$use_pkgconfig = xyes; then
       if test x$use_qr != xno; then
         BITCOIN_QT_CHECK([PKG_CHECK_MODULES([QR], [libqrencode], [have_qrencode=yes], [have_qrencode=no])])
       fi
-      if test x$build_bitcoin_utils$build_testchaind$bitcoin_enable_qt$use_tests != xnononono; then
+      if test x$build_bitcoin_utils$build_bitassetsd$bitcoin_enable_qt$use_tests != xnononono; then
         PKG_CHECK_MODULES([EVENT], [libevent],, [AC_MSG_ERROR(libevent not found.)])
         if test x$TARGET_OS != xwindows; then
           PKG_CHECK_MODULES([EVENT_PTHREADS], [libevent_pthreads],, [AC_MSG_ERROR(libevent_pthreads not found.)])
@@ -970,7 +970,7 @@ else
   AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
   AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
 
-  if test x$build_bitcoin_utils$build_testchaind$bitcoin_enable_qt$use_tests != xnononono; then
+  if test x$build_bitcoin_utils$build_bitassetsd$bitcoin_enable_qt$use_tests != xnononono; then
     AC_CHECK_HEADER([event2/event.h],, AC_MSG_ERROR(libevent headers missing),)
     AC_CHECK_LIB([event],[main],EVENT_LIBS=-levent,AC_MSG_ERROR(libevent missing))
     if test x$TARGET_OS != xwindows; then
@@ -1019,7 +1019,7 @@ dnl univalue check
 
 need_bundled_univalue=yes
 
-if test x$build_bitcoin_utils$build_testchaind$bitcoin_enable_qt$use_tests$use_bench = xnonononono; then
+if test x$build_bitcoin_utils$build_bitassetsd$bitcoin_enable_qt$use_tests$use_bench = xnonononono; then
   need_bundled_univalue=no
 else
 
@@ -1065,11 +1065,11 @@ AC_SUBST(UNIVALUE_LIBS)
 
 BITCOIN_QT_PATH_PROGS([PROTOC], [protoc],$protoc_bin_path)
 
-AC_MSG_CHECKING([whether to build testchaind])
-AM_CONDITIONAL([BUILD_BITCOIND], [test x$build_testchaind = xyes])
-AC_MSG_RESULT($build_testchaind)
+AC_MSG_CHECKING([whether to build bitassetsd])
+AM_CONDITIONAL([BUILD_BITCOIND], [test x$build_bitassetsd = xyes])
+AC_MSG_RESULT($build_bitassetsd)
 
-AC_MSG_CHECKING([whether to build utils (testchain-cli testchain-tx)])
+AC_MSG_CHECKING([whether to build utils (bitassets-cli bitassets-tx)])
 AM_CONDITIONAL([BUILD_BITCOIN_UTILS], [test x$build_bitcoin_utils = xyes])
 AC_MSG_RESULT($build_bitcoin_utils)
 
@@ -1197,7 +1197,7 @@ else
   AC_MSG_RESULT([no])
 fi
 
-if test x$build_bitcoin_utils$build_bitcoin_libs$build_testchaind$bitcoin_enable_qt$use_bench$use_tests = xnononononono; then
+if test x$build_bitcoin_utils$build_bitcoin_libs$build_bitassetsd$bitcoin_enable_qt$use_bench$use_tests = xnononononono; then
   AC_MSG_ERROR([No targets! Please specify at least one of: --with-utils --with-libs --with-daemon --with-gui --enable-bench or --enable-tests])
 fi
 

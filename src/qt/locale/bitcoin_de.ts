@@ -3567,7 +3567,7 @@
     </message>
     <message>
         <source>Use the test chain</source>
-        <translation>Die Testchain verwenden</translation>
+        <translation>Die BitAssets verwenden</translation>
     </message>
     <message>
         <source>User Agent comment (%s) contains unsafe characters.</source>

@@ -117,7 +117,7 @@ TestingSetup::~TestingSetup()
 
 TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
 {
-    // Disable default enabled BMM checks for testchain generation - otherwise
+    // Disable default enabled BMM checks for bitassets generation - otherwise
     // these blocks would need valid BMM and a mainchain connection for unit
     // testing
 

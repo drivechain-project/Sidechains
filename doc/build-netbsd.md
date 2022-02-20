@@ -2,7 +2,7 @@ NetBSD build guide
 ======================
 (updated for NetBSD 7.0)
 
-This guide describes how to build testchaind and command-line utilities on NetBSD.
+This guide describes how to build bitassetsd and command-line utilities on NetBSD.
 
 This guide does not contain instructions for building the GUI.
 

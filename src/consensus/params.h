@@ -61,7 +61,7 @@ struct Params {
     /**
      * Minimum blocks including miner confirmation of the total of 2016 blocks in a retargeting period,
      * (nPowTargetTimespan / nPowTargetSpacing) which is also used for BIP9 deployments.
-     * Examples: 1916 for 95%, 1512 for testchains.
+     * Examples: 1916 for 95%, 1512 for bitassetss.
      */
     uint32_t nRuleChangeActivationThreshold;
     uint32_t nMinerConfirmationWindow;

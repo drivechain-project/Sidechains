@@ -1,7 +1,7 @@
 # It is not recommended to modify this file in-place, because it will
 # be overwritten during package upgrades. If you want to add further
 # options or overwrite existing ones then use
-# $ systemctl edit testchaind.service
+# $ systemctl edit bitassetsd.service
 # See "man systemd.service" for details.
 
 # Note that almost all daemon options could be specified in
@@ -12,12 +12,12 @@ Description=Bitcoin daemon
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/testchaind -daemon -conf=/etc/bitcoin/bitcoin.conf -pid=/run/testchaind/testchaind.pid
-# Creates /run/testchaind owned by bitcoin
-RuntimeDirectory=testchaind
+ExecStart=/usr/bin/bitassetsd -daemon -conf=/etc/bitcoin/bitcoin.conf -pid=/run/bitassetsd/bitassetsd.pid
+# Creates /run/bitassetsd owned by bitcoin
+RuntimeDirectory=bitassetsd
 User=bitcoin
 Type=forking
-PIDFile=/run/testchaind/testchaind.pid
+PIDFile=/run/bitassetsd/bitassetsd.pid
 Restart=on-failure
 PrivateTmp=true
 

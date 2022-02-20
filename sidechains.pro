@@ -396,9 +396,9 @@ SOURCES += src/addrdb.cpp \
            src/sidechain.cpp \
            src/sidechainclient.cpp \
            src/sync.cpp \
-           src/testchain-cli.cpp \
-           src/testchain-tx.cpp \
-           src/testchaind.cpp \
+           src/bitassets-cli.cpp \
+           src/bitassets-tx.cpp \
+           src/bitassetsd.cpp \
            src/threadinterrupt.cpp \
            src/timedata.cpp \
            src/torcontrol.cpp \

@@ -1,2 +1,2 @@
-usr/local/bin/testchaind usr/bin
-usr/local/bin/testchain-cli usr/bin
+usr/local/bin/bitassetsd usr/bin
+usr/local/bin/bitassets-cli usr/bin

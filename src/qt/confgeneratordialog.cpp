@@ -93,7 +93,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     fs::path pathSide = GetDefaultDataDir();
     if (!fs::exists(pathSide)) {
         // Show error message
-        messageBox.setText("Could not find testchain data directory!");
+        messageBox.setText("Could not find bitassets data directory!");
         messageBox.exec();
         return false;
     }
@@ -244,7 +244,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     // Write sidechain configuration file
     // Do we need to backup the old config file?
-    fs::path pathConfSide = pathSide / "testchain.conf";
+    fs::path pathConfSide = pathSide / "bitassets.conf";
     if (fs::exists(pathConfSide)) {
         // Rename old configuration file
         QString strNew = QString::fromStdString(pathConfSide.string());

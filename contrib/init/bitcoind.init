@@ -1,36 +1,36 @@
 #!/bin/bash
 #
-#  testchaind The bitcoin core server.
+#  bitassetsd The bitcoin core server.
 #
 #
 # chkconfig: 345 80 20
-# description: testchaind
-# processname: testchaind
+# description: bitassetsd
+# processname: bitassetsd
 #
 
 # Source function library.
 . /etc/init.d/functions
 
-# you can override defaults in /etc/sysconfig/testchaind, see below
-if [ -f /etc/sysconfig/testchaind ]; then
-        . /etc/sysconfig/testchaind
+# you can override defaults in /etc/sysconfig/bitassetsd, see below
+if [ -f /etc/sysconfig/bitassetsd ]; then
+        . /etc/sysconfig/bitassetsd
 fi
 
 RETVAL=0
 
-prog=testchaind
-# you can override the lockfile via BITCOIND_LOCKFILE in /etc/sysconfig/testchaind
-lockfile=${BITCOIND_LOCKFILE-/var/lock/subsys/testchaind}
+prog=bitassetsd
+# you can override the lockfile via BITCOIND_LOCKFILE in /etc/sysconfig/bitassetsd
+lockfile=${BITCOIND_LOCKFILE-/var/lock/subsys/bitassetsd}
 
-# testchaind defaults to /usr/bin/testchaind, override with BITCOIND_BIN
-testchaind=${BITCOIND_BIN-/usr/bin/testchaind}
+# bitassetsd defaults to /usr/bin/bitassetsd, override with BITCOIND_BIN
+bitassetsd=${BITCOIND_BIN-/usr/bin/bitassetsd}
 
-# testchaind opts default to -disablewallet, override with BITCOIND_OPTS
-testchaind_opts=${BITCOIND_OPTS--disablewallet}
+# bitassetsd opts default to -disablewallet, override with BITCOIND_OPTS
+bitassetsd_opts=${BITCOIND_OPTS--disablewallet}
 
 start() {
     echo -n $"Starting $prog: "
-    daemon $DAEMONOPTS $testchaind $testchaind_opts
+    daemon $DAEMONOPTS $bitassetsd $bitassetsd_opts
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && touch $lockfile
