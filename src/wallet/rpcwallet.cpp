@@ -3504,7 +3504,7 @@ UniValue createwithdrawal(const JSONRPCRequest& request)
 
     if (request.fHelp || request.params.size() != 5)
         throw std::runtime_error(
-            "createwt amount \"address\"\n"
+            "createwithdrawal amount \"address\"\n"
             "\nCreate a withdrawal so that it can be included in a bundle.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
@@ -3516,17 +3516,11 @@ UniValue createwithdrawal(const JSONRPCRequest& request)
             "\nResult:\n"
             "\"txid\"                  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
-            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
+            + HelpExampleCli("createwithdrawal", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
+            + HelpExampleRpc("createwithdrawal", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
         );
 
     ObserveSafeMode();
-
-    // Make sure the results are valid at least up to the most recent block
-    // the user could have gotten from another RPC command prior to now
-    pwallet->BlockUntilSyncedToCurrentChain();
-
-    LOCK2(cs_main, pwallet->cs_wallet);
 
     CTxDestination dest = DecodeDestination(request.params[0].get_str(), true /*fMainchainAddress */);
     if (!IsValidDestination(dest)) {
@@ -3552,6 +3546,12 @@ UniValue createwithdrawal(const JSONRPCRequest& request)
     CAmount nMainchainFee = AmountFromValue(request.params[4]);
     if (nMainchainFee <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for mainchain fee");
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
 
     EnsureWalletIsUnlocked(pwallet);
 
@@ -3741,6 +3741,275 @@ UniValue refundallwithdrawals(const JSONRPCRequest& request)
     }
 
     return result;
+}
+
+UniValue createasset(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 7)
+        throw std::runtime_error(
+            "createasset\n"
+            "\nArguments:\n"
+            "1. \"ticker\"             (string, required)\n"
+            "2. \"headline\"           (string, required)\n"
+            "3. \"payload\"            (string, required)\n"
+            "4. \"fee\"                (numeric or string, required)\n"
+            "5. \"supply\"             (numeric, required)\n"
+            "6. \"controlleraddress\"  (string, required)\n" // TODO maybe flip with gen addr & make optional for non-tokens
+            "7. \"gensisaddress\"      (string, required)\n"
+            "\nCreate a BitAsset\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nResult (array):\n"
+            "\"txid\"           (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("createasset", "")
+            + HelpExampleRpc("createasset", "")
+        );
+
+    ObserveSafeMode();
+
+    // TODO check sizes
+    // Ticker
+    std::string ticker = request.params[0].get_str();
+    if (ticker.empty()) {
+        std::string strError = "Invalid ticker";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Headline
+    std::string headline = request.params[1].get_str();
+    if (ticker.empty()) {
+        std::string strError = "Invalid headline";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Payload
+    uint256 payload = uint256S(request.params[2].get_str());
+    if (payload.IsNull()) {
+        std::string strError = "Invalid - missing payload";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[3]);
+    if (nFee <= 0) {
+        std::string strError = "Invalid fee amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Supply
+    int64_t nSupply = request.params[4].get_int64();
+    if (nSupply < 1) {
+        std::string strError = "Invalid supply";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    // Controller address
+    CTxDestination destControl = DecodeDestination(request.params[5].get_str());
+    if (!IsValidDestination(destControl)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid controller address");
+    }
+
+    // Genesis address
+    CTxDestination destGenesis = DecodeDestination(request.params[6].get_str());
+    if (!IsValidDestination(destGenesis)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid genesis address");
+    }
+
+    EnsureWalletIsUnlocked(pwallet);
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    CTransactionRef tx;
+    std::string strFail = "";
+    if (!pwallet->CreateAsset(tx, strFail, ticker, headline, payload, nFee, nSupply, request.params[5].get_str(), request.params[6].get_str()))
+    {
+        LogPrintf("%s: %s\n", __func__, strFail);
+        throw JSONRPCError(RPC_MISC_ERROR, strFail);
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("txid", tx->GetHash().ToString());
+    return response;
+}
+
+UniValue listmyassets(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listmyassets\n"
+            "\nList BitAssets owned by this wallet\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nResult (array):\n"
+            "\"asset\"           (string)\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listmyassets", "")
+            + HelpExampleRpc("listmyassets", "")
+        );
+
+    ObserveSafeMode();
+
+    EnsureWalletIsUnlocked(pwallet);
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    std::vector<COutput> vOutput;
+    pwallet->AvailableAssets(vOutput);
+
+    UniValue ar(UniValue::VARR);
+    for (const COutput& o : vOutput) {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("txid", o.tx->GetHash().ToString());
+        obj.pushKV("desc", o.ToString());
+        ar.push_back(obj);
+    }
+    return ar;
+}
+
+UniValue transferasset(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 4)
+        throw std::runtime_error(
+            "transferasset\n"
+            "\nArguments:\n"
+            "1. \"txid\"           (string, required)\n"
+            "2. \"destination\"    (string, required)\n"
+            "3. \"fee\"            (numeric or string, required)\n"
+            "4. \"amount\"         (numeric or string, required)\n"
+            "\nTransfer a BitAsset\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nResult:\n"
+            "\"txid\"           (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("transferasset", "")
+            + HelpExampleRpc("transferasset", "")
+        );
+
+    ObserveSafeMode();
+
+    // Txid
+    uint256 txid = uint256S(request.params[0].get_str());
+    if (txid.IsNull()) {
+        std::string strError = "Invalid txid";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Destination
+    CTxDestination dest = DecodeDestination(request.params[1].get_str());
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid destination");
+    }
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[2]);
+    if (nFee <= 0) {
+        std::string strError = "Invalid fee amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Amount
+    CAmount nAmount = AmountFromValue(request.params[3]);
+    if (nAmount <= 0) {
+        std::string strError = "Invalid amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    EnsureWalletIsUnlocked(pwallet);
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    std::string strFail = "";
+    if (!pwallet->TransferAsset(strFail, txid, dest, nFee, nAmount))
+    {
+        LogPrintf("%s: %s\n", __func__, strFail);
+        throw JSONRPCError(RPC_MISC_ERROR, strFail);
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("txid", uint256().ToString());
+    return response;
+}
+
+UniValue transferassetcontrol(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 4)
+        throw std::runtime_error(
+            "transferassetcontrol\n"
+            "\nArguments:\n"
+            "1. \"txid\"           (string, required)\n"
+            "2. \"destination\"    (string, required)\n"
+            "3. \"fee\"            (numeric or string, required)\n"
+            "\nTransfer BitAsset controller coin\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nResult:\n"
+            "\"txid\"           (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("transferassetcontrol", "")
+            + HelpExampleRpc("transferassetcontrol", "")
+        );
+
+    ObserveSafeMode();
+
+    // Txid
+    uint256 txid = uint256S(request.params[0].get_str());
+    if (txid.IsNull()) {
+        std::string strError = "Invalid txid";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+    // Destination
+    CTxDestination dest = DecodeDestination(request.params[1].get_str());
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid destination");
+    }
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[2]);
+    if (nFee <= 0) {
+        std::string strError = "Invalid fee amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    EnsureWalletIsUnlocked(pwallet);
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    // TODO return value tx / txid
+    CTransactionRef tx;
+    std::string strFail = "";
+    if (!pwallet->TransferAssetControl(strFail, txid, dest, nFee))
+    {
+        LogPrintf("%s: %s\n", __func__, strFail);
+        throw JSONRPCError(RPC_MISC_ERROR, strFail);
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("txid", tx->GetHash().ToString());
+    return response;
 }
 
 UniValue rescanblockchain(const JSONRPCRequest& request)
@@ -4101,9 +4370,14 @@ static const CRPCCommand commands[] =
     { "wallet",             "removeprunedfunds",                &removeprunedfunds,             {"txid"} },
     { "wallet",             "rescanblockchain",                 &rescanblockchain,              {"start_height", "stop_height"} },
 
-    { "sidechain",          "createwithdrawal",                 &createwithdrawal,                      {"address","refundaddress","namount","nfee", "nmainchainfee"} },
-    { "sidechain",          "createwithdrawalrefundrequest",    &createwithdrawalrefundrequest,         {"id"} },
-    { "sidechain",          "refundallwithdrawals",             &refundallwithdrawals,                  {} },
+    { "sidechain",          "createwithdrawal",                 &createwithdrawal,              {"address","refundaddress","namount","nfee", "nmainchainfee"} },
+    { "sidechain",          "createwithdrawalrefundrequest",    &createwithdrawalrefundrequest, {"id"} },
+    { "sidechain",          "refundallwithdrawals",             &refundallwithdrawals,          {} },
+
+    { "BitAssets",          "createasset",                      &createasset,                   {"ticker", "tagline", "payload", "nfee", "nsupply", "controllerdest", "genesisdest"} },
+    { "BitAssets",          "listmyassets",                     &listmyassets,                  {} },
+    { "BitAssets",          "transferasset",                    &transferasset,                 {"txid", "destination", "fee", "amount"} },
+    { "BitAssets",          "transferassetcontrol",             &transferassetcontrol,          {"txid", "destination", "fee"} },
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)

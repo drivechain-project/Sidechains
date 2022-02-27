@@ -1347,17 +1347,28 @@ void CChainState::InvalidBlockFound(CBlockIndex *pindex, const CValidationState 
 
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txundo, int nHeight)
 {
-    // mark inputs spent
+    CAmount amountAssetIn = CAmount(0); // Track asset inputs
+    int nControlN = -1;
     if (!tx.IsCoinBase()) {
         txundo.vprevout.reserve(tx.vin.size());
-        for (const CTxIn &txin : tx.vin) {
+        // mark inputs spent
+        for (size_t x = 0; x < tx.vin.size(); x++) {
             txundo.vprevout.emplace_back();
-            bool is_spent = inputs.SpendCoin(txin.prevout, &txundo.vprevout.back());
+            bool fBitAsset = false;
+            bool fBitAssetControl = false;
+            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, &txundo.vprevout.back());
             assert(is_spent);
+
+            if (fBitAsset)
+                amountAssetIn += txundo.vprevout.back().out.nValue;
+
+            if (fBitAssetControl)
+                nControlN = x;
         }
     }
+
     // add outputs
-    AddCoins(inputs, tx, nHeight);
+    AddCoins(inputs, tx, nHeight, amountAssetIn, nControlN);
 }
 
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
@@ -1635,7 +1646,9 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
             if (!scriptPubKey.IsUnspendable()) {
                 COutPoint out(hash, o);
                 Coin coin;
-                bool is_spent = view.SpendCoin(out, &coin);
+                bool fBitAsset = false;
+                bool fBitAssetControl = false;
+                bool is_spent = view.SpendCoin(out, fBitAsset, fBitAssetControl, &coin);
                 if (!is_spent || tx.vout[o] != coin.out || pindex->nHeight != coin.nHeight || is_coinbase != coin.fCoinBase) {
                     fClean = false; // transaction output mismatch
                 }
@@ -4777,14 +4790,24 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
         return error("ReplayBlock(): ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
     }
 
+    CAmount amountAssetIn = CAmount(0);
+    int nControlN = -1;
     for (const CTransactionRef& tx : block.vtx) {
         if (!tx->IsCoinBase()) {
-            for (const CTxIn &txin : tx->vin) {
-                inputs.SpendCoin(txin.prevout);
+            for (size_t x = 0; x < tx->vin.size(); x++) {
+                bool fBitAsset = false;
+                bool fBitAssetControl = false;
+                Coin coin;
+                inputs.SpendCoin(tx->vin[x].prevout, fBitAsset, fBitAssetControl, &coin);
+
+                if (fBitAsset)
+                    amountAssetIn += coin.out.nValue;
+                if (fBitAssetControl)
+                    nControlN = x;
             }
         }
         // Pass check = true as every addition may be an overwrite.
-        AddCoins(inputs, *tx, pindex->nHeight, true);
+        AddCoins(inputs, *tx, pindex->nHeight, amountAssetIn, nControlN, true);
     }
     return true;
 }

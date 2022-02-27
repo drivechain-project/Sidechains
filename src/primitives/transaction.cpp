@@ -55,7 +55,7 @@ std::string CTxOut::ToString() const
 }
 
 CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nLockTime(0) {}
-CMutableTransaction::CMutableTransaction(const CTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime) {}
+CMutableTransaction::CMutableTransaction(const CTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime), ticker(tx.ticker), headline(tx.headline), payload(tx.payload) {}
 
 uint256 CMutableTransaction::GetHash() const
 {
@@ -76,16 +76,25 @@ uint256 CTransaction::GetWitnessHash() const
 }
 
 /* For backward compatibility, the hash is initialized to 0. TODO: remove the need for this default constructor entirely. */
-CTransaction::CTransaction() : vin(), vout(), nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), hash() {}
-CTransaction::CTransaction(const CMutableTransaction &tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime), hash(ComputeHash()) {}
-CTransaction::CTransaction(CMutableTransaction &&tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nLockTime(tx.nLockTime), hash(ComputeHash()) {}
+CTransaction::CTransaction() : vin(), vout(), nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), ticker(""), headline(""), payload(), hash() {}
+CTransaction::CTransaction(const CMutableTransaction &tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime), ticker(tx.ticker), headline(tx.headline), payload(tx.payload), hash(ComputeHash()) {}
+CTransaction::CTransaction(CMutableTransaction &&tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nLockTime(tx.nLockTime), ticker(tx.ticker), headline(tx.headline), payload(tx.payload), hash(ComputeHash()) {}
 
 CAmount CTransaction::GetValueOut() const
 {
+    bool fBitAsset = nVersion == TRANSACTION_BITASSET_CREATE_VERSION;
+
+    // Skip the controller and genesis output of a BitAsset creation
+    std::vector<CTxOut>::const_iterator it;
+    if (fBitAsset && vout.size() > 2)
+        it = vout.begin() + 2;
+    else
+        it = vout.begin();
+
     CAmount nValueOut = 0;
-    for (const auto& tx_out : vout) {
-        nValueOut += tx_out.nValue;
-        if (!MoneyRange(tx_out.nValue) || !MoneyRange(nValueOut))
+    for (; it != vout.end(); it++) {
+        nValueOut += it->nValue;
+        if (!MoneyRange(it->nValue) || !MoneyRange(nValueOut))
             throw std::runtime_error(std::string(__func__) + ": value out of range");
     }
     return nValueOut;

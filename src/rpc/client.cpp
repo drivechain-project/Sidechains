@@ -149,6 +149,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getaveragemainchainfees", 1, "startheight" },
     { "refreshbmm", 0, "createnew" },
     { "getmainchainblockhash", 0, "height" },
+    // BitAssets
+    { "createasset", 3, "fee" },
+    { "createasset", 4, "supply" },
 };
 
 class CRPCConvertTable

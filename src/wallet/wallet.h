@@ -327,6 +327,9 @@ public:
     std::string strFromAccount;
     int64_t nOrderPos; //!< position in ordered transaction list
 
+    CAmount amountAssetIn;
+    int nControlN;
+
     // memory only
     mutable bool fDebitCached;
     mutable bool fCreditCached;
@@ -388,6 +391,8 @@ public:
         nImmatureWatchCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
+        amountAssetIn = CAmount(0);
+        nControlN = -1;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -417,6 +422,8 @@ public:
         READWRITE(nTimeReceived);
         READWRITE(fFromMe);
         READWRITE(fSpent);
+        READWRITE(amountAssetIn);
+        READWRITE(nControlN);
 
         if (ser_action.ForRead())
         {
@@ -847,6 +854,8 @@ public:
      */
     void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlySafe=true, const CCoinControl *coinControl = nullptr, const CAmount& nMinimumAmount = 1, const CAmount& nMaximumAmount = MAX_MONEY, const CAmount& nMinimumSumAmount = MAX_MONEY, const uint64_t nMaximumCount = 0, const int nMinDepth = 0, const int nMaxDepth = 9999999) const;
 
+    void AvailableAssets(std::vector<COutput>& vCoins, uint256 txid = uint256()) const;
+
     /**
      * Return list of available coins and locked coins grouped by non-change output address.
      */
@@ -979,7 +988,11 @@ public:
      */
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosInOut,
                            std::string& strFailReason, const CCoinControl& coin_control, bool sign = true);
+    bool CreateAsset(CTransactionRef& tx, std::string& strFail, const std::string& strTicker, const std::string& strHeadline, const uint256& hashPayload, const CAmount& nFee, const int64_t nSupply, const std::string& strControllerDest, const std::string& strGenesisDest);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state);
+
+    bool TransferAsset(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount);
+    bool TransferAssetControl(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee);
 
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& entries);
     bool AddAccountingEntry(const CAccountingEntry&);

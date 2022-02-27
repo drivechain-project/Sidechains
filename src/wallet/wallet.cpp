@@ -1335,8 +1335,10 @@ isminetype CWallet::IsMine(const CTxOut& txout) const
 
 CAmount CWallet::GetCredit(const CTxOut& txout, const isminefilter& filter) const
 {
-    if (!MoneyRange(txout.nValue))
-        throw std::runtime_error(std::string(__func__) + ": value out of range");
+    // TODO
+    // Skip BitAssets & re-enable
+    //if (!MoneyRange(txout.nValue))
+    //    throw std::runtime_error(std::string(__func__) + ": value out of range");
     return ((IsMine(txout) & filter) ? txout.nValue : 0);
 }
 
@@ -2166,6 +2168,10 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
         const uint256& wtxid = entry.first;
         const CWalletTx* pcoin = &entry.second;
 
+        // Skip BitAsset related outputs
+        if (pcoin->amountAssetIn > 0 || pcoin->tx->nVersion == TRANSACTION_BITASSET_CREATE_VERSION)
+            continue;
+
         if (!CheckFinalTx(*pcoin->tx))
             continue;
 
@@ -2257,6 +2263,103 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
             // Checks the maximum number of UTXO's.
             if (nMaximumCount > 0 && vCoins.size() >= nMaximumCount) {
                 return;
+            }
+        }
+    }
+}
+
+// TODO
+// For basic testing this will take in an optional txid
+// A better version might take in an asset ID to filter outputs
+void CWallet::AvailableAssets(std::vector<COutput> &vCoins, uint256 txid) const
+{
+    AssertLockHeld(cs_main);
+    AssertLockHeld(cs_wallet);
+
+    vCoins.clear();
+
+    for (const auto& entry : mapWallet)
+    {
+        const uint256& wtxid = entry.first;
+        const CWalletTx* wtx = &entry.second;
+
+        // Skip transactions not from optional txid
+        if (!txid.IsNull() && wtxid != txid)
+            continue;
+
+        if (wtx->amountAssetIn <= 0 && wtx->tx->nVersion != TRANSACTION_BITASSET_CREATE_VERSION)
+            continue;
+
+
+        if (!CheckFinalTx(*wtx->tx))
+            continue;
+
+        // Ignore unconfirmed assets
+        int nDepth = wtx->GetDepthInMainChain();
+        if (nDepth < 1)
+            continue;
+
+        bool safeTx = wtx->IsTrusted();
+        if (!safeTx)
+            continue;
+
+        if (wtx->amountAssetIn) {
+            // Need to find the asset outputs that belong to us,
+            // while adding up to the total amountassetin. Some of the outputs
+            // might not be ours.
+            CAmount amountAssetOut = CAmount(0);
+            for (unsigned int i = 0; i < wtx->tx->vout.size(); i++) {
+                if (amountAssetOut >= wtx->amountAssetIn)
+                    break;
+
+                amountAssetOut += wtx->tx->vout[i].nValue;
+
+                // Skip asset control outputs
+                if (wtx->nControlN == (int)i)
+                   continue;
+
+                if (IsLockedCoin(entry.first, i))
+                    continue;
+
+                if (IsSpent(wtxid, i))
+                    continue;
+
+                isminetype mine = IsMine(wtx->tx->vout[i]);
+
+                if (mine == ISMINE_NO) {
+                    continue;
+                }
+
+                bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO);
+                bool fSolvableIn = (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO;
+
+                vCoins.push_back(COutput(wtx, i, nDepth, fSpendableIn, fSolvableIn, true));
+            }
+        }
+        else
+        if (wtx->tx->nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+            // Check if we have any assets from the first two outputs
+            if (wtx->tx->vout.size() < 2)
+                continue;
+
+            // Do not return the controller output
+            /*
+            if (!IsLockedCoin(entry.first, 0) && !IsSpent(wtxid, 0)) {
+                isminetype mine = IsMine(wtx->tx->vout[0]);
+                if (mine != ISMINE_NO) {
+                    bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO);
+                    bool fSolvableIn = (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO;
+                    vCoins.push_back(COutput(wtx, 0, nDepth, fSpendableIn, fSolvableIn, true));
+                }
+            }
+            */
+            if  (!IsLockedCoin(entry.first, 1) && !IsSpent(wtxid, 1)) {
+                isminetype mine = IsMine(wtx->tx->vout[1]);
+                if (mine != ISMINE_NO) {
+                    bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO);
+                    bool fSolvableIn = (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO;
+                    vCoins.push_back(COutput(wtx, 1, nDepth, fSpendableIn, fSolvableIn, true));
+                }
             }
         }
     }
@@ -3000,6 +3103,340 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
               feeCalc.est.fail.start, feeCalc.est.fail.end,
               100 * feeCalc.est.fail.withinTarget / (feeCalc.est.fail.totalConfirmed + feeCalc.est.fail.inMempool + feeCalc.est.fail.leftMempool),
               feeCalc.est.fail.withinTarget, feeCalc.est.fail.totalConfirmed, feeCalc.est.fail.inMempool, feeCalc.est.fail.leftMempool);
+    return true;
+}
+
+bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::string& strTicker, const std::string& strHeadline, const uint256& hashPayload, const CAmount& nFee, const int64_t nSupply, const std::string& strControllerDest, const std::string& strGenesisDest)
+{
+    strFail = "Unknown error!";
+
+    if (vpwallets.empty()) {
+        strFail = "No active wallet!\n";
+        return false;
+    }
+
+    CTxDestination destControl = DecodeDestination(strControllerDest);
+    if (!IsValidDestination(destControl)) {
+        strFail = "Invalid controller destination";
+        return false;
+    }
+
+    CTxDestination destGenesis = DecodeDestination(strGenesisDest);
+    if (!IsValidDestination(destGenesis)) {
+        strFail = "Invalid genesis destination";
+        return false;
+    }
+
+    CMutableTransaction mtx;
+    mtx.nVersion = TRANSACTION_BITASSET_CREATE_VERSION;
+
+    // TODO controller output must be OP_RETURN for assets, unlike tokens
+    // they don't have a controller...
+
+    // BitAsset info
+    mtx.ticker = strTicker;
+    mtx.headline = strHeadline;
+    mtx.payload = hashPayload;
+    // contoller output
+    mtx.vout.push_back(CTxOut(1, GetScriptForDestination(destControl)));
+    // genesis output
+    mtx.vout.push_back(CTxOut(nSupply, GetScriptForDestination(destGenesis)));
+
+    BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+    // Select coins to cover fee
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true /* fOnlySafe */);
+    std::set<CInputCoin> setCoins;
+    CAmount nAmountRet = CAmount(0);
+    if (!SelectCoins(vCoins, nFee, setCoins, nAmountRet)) {
+        strFail = "Could not collect enough coins to cover fee!\n";
+        return false;
+    }
+
+    // Handle change if there is any
+    const CAmount nChange = nAmountRet - nFee;
+    CReserveKey reserveKey(vpwallets[0]);
+    if (nChange > 0) {
+        CScript scriptChange;
+
+        // Reserve a new key pair from key pool
+        CPubKey vchPubKey;
+        if (!reserveKey.GetReservedKey(vchPubKey))
+        {
+            strFail = "Keypool ran out, please call keypoolrefill first!\n";
+            return false;
+        }
+        scriptChange = GetScriptForDestination(vchPubKey.GetID());
+
+        CTxOut out(nChange, scriptChange);
+        if (!IsDust(out, ::dustRelayFee))
+            mtx.vout.push_back(out);
+    }
+
+    // Add inputs
+    for (const auto& coin : setCoins)
+        mtx.vin.push_back(CTxIn(coin.outpoint.hash, coin.outpoint.n, CScript()));
+
+    // Dummy sign the transaction to calculate minimum fee
+    std::set<CInputCoin> setCoinsTemp = setCoins;
+    if (!DummySignTx(mtx, setCoinsTemp)) {
+        strFail = "Dummy signing transaction for required fee calculation failed!";
+        return false;
+    }
+
+    // Get transaction size with dummy signatures
+    unsigned int nBytes = GetVirtualTransactionSize(mtx);
+
+    // Calculate fee
+    CCoinControl coinControl;
+    FeeCalculation feeCalc;
+    CAmount nFeeNeeded = GetMinimumFee(nBytes, coinControl, ::mempool, ::feeEstimator, &feeCalc);
+
+    // Check that the fee is valid for relay
+    if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes)) {
+        strFail = "Transaction too large for fee policy";
+        return false;
+    }
+
+    // Check the user set fee
+    if (nFee < nFeeNeeded) {
+        strFail = "The fee you have set is too small!";
+        return false;
+    }
+
+    // Remove dummy signatures
+    for (auto& vin : mtx.vin) {
+        vin.scriptSig = CScript();
+        vin.scriptWitness.SetNull();
+    }
+
+    // Sign the inputs
+    const CTransaction txToSign = mtx;
+    int nIn = 0;
+    for (const auto& coin : setCoins) {
+        const CScript& scriptPubKey = coin.txout.scriptPubKey;
+        SignatureData sigdata;
+
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, coin.txout.nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+        {
+            strFail = "Signing inputs failed!\n";
+            return false;
+        } else {
+            UpdateTransaction(mtx, nIn, sigdata);
+        }
+
+        nIn++;
+    }
+
+    // Broadcast transaction
+    CWalletTx walletTx;
+    walletTx.fTimeReceivedIsTxTime = true;
+    walletTx.fFromMe = true;
+    walletTx.BindWallet(this);
+
+    walletTx.SetTx(MakeTransactionRef(std::move(mtx)));
+
+    walletTx.nControlN = 0;
+
+    CValidationState state;
+    if (!CommitTransaction(walletTx, reserveKey, g_connman.get(), state)) {
+        strFail = "Failed to commit BitAsset creation transaction! Reject reason: " + FormatStateMessage(state) + "\n";
+        return false;
+    }
+    tx = walletTx.tx;
+
+    return true;
+}
+
+bool CWallet::TransferAsset(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount)
+{
+    strFail = "Unknown error!";
+
+    if (vpwallets.empty()) {
+        strFail = "No active wallet!\n";
+        return false;
+    }
+
+    if (txid.IsNull()) {
+        strFail = "Invalid txid";
+        return false;
+    }
+
+    if (!IsValidDestination(dest)) {
+        strFail = "Invalid destination";
+        return false;
+    }
+
+    BlockUntilSyncedToCurrentChain();
+    LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+    // Get our asset outputs from txid
+    std::vector<COutput> vOut;
+    AvailableAssets(vOut, txid);
+
+    CAmount nAmountAsset = CAmount(0);
+    for (const COutput& out : vOut)
+        nAmountAsset += out.tx->tx->vout[out.i].nValue;
+
+    if (nAmountAsset < nAmount) {
+        strFail = "Insufficient asset funds!";
+        return false;
+    }
+
+    CMutableTransaction mtx;
+
+    // Add asset inputs
+    for (const COutput& out : vOut)
+        mtx.vin.push_back(CTxIn(txid, out.i, CScript()));
+
+    // Handle asset change
+    const CAmount nAssetChange = nAmountAsset - nAmount;
+    CReserveKey reserveKeyAsset(vpwallets[0]);
+    if (nAssetChange > 0) {
+        CScript scriptAssetChange;
+
+        // Reserve a new key pair from key pool
+        CPubKey vchPubKey;
+        if (!reserveKeyAsset.GetReservedKey(vchPubKey))
+        {
+            strFail = "Keypool ran out, please call keypoolrefill first!\n";
+            return false;
+        }
+        scriptAssetChange = GetScriptForDestination(vchPubKey.GetID());
+
+        CTxOut out(nAssetChange, scriptAssetChange);
+        mtx.vout.push_back(out);
+    }
+
+    // Add asset transfer output
+    mtx.vout.push_back(CTxOut(nAmount, GetScriptForDestination(dest)));
+
+    // Select coins to cover fee
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true /* fOnlySafe */);
+    std::set<CInputCoin> setCoins;
+    CAmount nAmountCoins = CAmount(0);
+    if (!SelectCoins(vCoins, nFee, setCoins, nAmountCoins)) {
+        strFail = "Could not collect enough coins to cover fee!\n";
+        return false;
+    }
+
+    // Handle fee input change if there is any
+    const CAmount nChange = nAmountCoins - nFee;
+    CReserveKey reserveKey(vpwallets[0]);
+    if (nChange > 0) {
+        CScript scriptChange;
+
+        // Reserve a new key pair from key pool
+        CPubKey vchPubKey;
+        if (!reserveKey.GetReservedKey(vchPubKey))
+        {
+            strFail = "Keypool ran out, please call keypoolrefill first!\n";
+            return false;
+        }
+        scriptChange = GetScriptForDestination(vchPubKey.GetID());
+
+        CTxOut out(nChange, scriptChange);
+        if (!IsDust(out, ::dustRelayFee))
+            mtx.vout.push_back(out);
+    }
+
+    // Add inputs for fee
+    for (const auto& coin : setCoins)
+        mtx.vin.push_back(CTxIn(coin.outpoint.hash, coin.outpoint.n, CScript()));
+
+    // Dummy sign the transaction to calculate minimum fee
+    std::set<CInputCoin> setCoinsTemp = setCoins;
+    if (!DummySignTx(mtx, setCoinsTemp)) {
+        strFail = "Dummy signing transaction for required fee calculation failed!";
+        return false;
+    }
+
+    // Get transaction size with dummy signatures
+    unsigned int nBytes = GetVirtualTransactionSize(mtx);
+
+    // Calculate fee
+    CCoinControl coinControl;
+    FeeCalculation feeCalc;
+    CAmount nFeeNeeded = GetMinimumFee(nBytes, coinControl, ::mempool, ::feeEstimator, &feeCalc);
+
+    // Check that the fee is valid for relay
+    if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes)) {
+        strFail = "Transaction too large for fee policy";
+        return false;
+    }
+
+    // Check the user set fee
+    if (nFee < nFeeNeeded) {
+        strFail = "The fee you have set is too small!";
+        return false;
+    }
+
+    // Remove dummy signatures
+    for (auto& vin : mtx.vin) {
+        vin.scriptSig = CScript();
+        vin.scriptWitness.SetNull();
+    }
+
+    // Sign asset & fee inputs
+
+    const CTransaction txToSign = mtx;
+    int nIn = 0;
+
+    // Sign the asset inputs
+    for (const COutput& out : vOut) {
+        const CScript& scriptPubKey = out.tx->tx->vout[out.i].scriptPubKey;
+        SignatureData sigdata;
+
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, out.tx->tx->vout[out.i].nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+        {
+            strFail = "Signing asset inputs failed!\n";
+            return false;
+        } else {
+            UpdateTransaction(mtx, nIn, sigdata);
+        }
+        nIn++;
+    }
+
+    // Sign the fee inputs
+    for (const auto& coin : setCoins) {
+        const CScript& scriptPubKey = coin.txout.scriptPubKey;
+        SignatureData sigdata;
+
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, coin.txout.nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+        {
+            strFail = "Signing inputs failed!\n";
+            return false;
+        } else {
+            UpdateTransaction(mtx, nIn, sigdata);
+        }
+
+        nIn++;
+    }
+
+    // Broadcast transaction
+    CWalletTx walletTx;
+    walletTx.fTimeReceivedIsTxTime = true;
+    walletTx.fFromMe = true;
+    walletTx.BindWallet(this);
+
+    walletTx.amountAssetIn = nAmountAsset;
+
+    walletTx.SetTx(MakeTransactionRef(std::move(mtx)));
+    CValidationState state;
+    if (!CommitTransaction(walletTx, reserveKey, g_connman.get(), state)) {
+        strFail = "Failed to commit BitAsset creation transaction! Reject reason: " + FormatStateMessage(state) + "\n";
+        return false;
+    }
+
+    return true;
+}
+
+bool CWallet::TransferAssetControl(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee)
+{
     return true;
 }
 
@@ -4119,7 +4556,6 @@ int CMerkleTx::GetBlocksToMaturity() const
         return 0;
     return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
 }
-
 
 bool CWalletTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state)
 {

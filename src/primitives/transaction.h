@@ -13,6 +13,7 @@
 #include <uint256.h>
 
 static const int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
+static const int TRANSACTION_BITASSET_CREATE_VERSION = 10;
 
 /** An outpoint - a combination of a transaction hash and an index n into its vout */
 class COutPoint
@@ -192,6 +193,20 @@ struct CMutableTransaction;
  * - if (flags & 1):
  *   - CTxWitness wit;
  * - uint32_t nLockTime
+ *
+ * Create Assets version 10 tx:
+ * - int32_t nVersion
+ * - unsigned char dummy = 0x00
+ * - unsigned char flags (!= 0)
+ * - std::vector<CTxIn> vin
+ * - std::vector<CTxOut> vout
+ * - if (flags & 1):
+ *   - CTxWitness wit;
+ * - uint32_t nLockTime
+ * - string ticker
+ * - string headline
+ * - uint256 payload
+ *
  */
 template<typename Stream, typename TxType>
 inline void UnserializeTransaction(TxType& tx, Stream& s) {
@@ -229,6 +244,12 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
         throw std::ios_base::failure("Unknown transaction optional data");
     }
     s >> tx.nLockTime;
+
+    if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+        s >> tx.ticker;
+        s >> tx.headline;
+        s >> tx.payload;
+    }
 }
 
 template<typename Stream, typename TxType>
@@ -261,6 +282,11 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
         }
     }
     s << tx.nLockTime;
+    if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+        s << tx.ticker;
+        s << tx.headline;
+        s << tx.payload;
+    }
 }
 
 
@@ -277,7 +303,7 @@ public:
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
     // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
     // MAX_STANDARD_VERSION will be equal.
-    static const int32_t MAX_STANDARD_VERSION=3;
+    static const int32_t MAX_STANDARD_VERSION=10;
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
@@ -288,7 +314,12 @@ public:
     const std::vector<CTxOut> vout;
     const int32_t nVersion;
     const uint32_t nLockTime;
+
     const unsigned char replayBytes = 0x3f;
+
+    const std::string ticker;
+    const std::string headline;
+    const uint256 payload;
 
 private:
     /** Memory only. */
@@ -373,6 +404,10 @@ struct CMutableTransaction
     int32_t nVersion;
     uint32_t nLockTime;
     unsigned char replayBytes = 0x3f;
+
+    std::string ticker;
+    std::string headline;
+    uint256 payload;
 
     CMutableTransaction();
     CMutableTransaction(const CTransaction& tx);

@@ -21,6 +21,7 @@ enum TopLevelIndex {
     INDEX_WITHDRAWAL_BUNDLE_HASH_COMMIT,
     INDEX_BLOCK_VERSION_COMMIT,
     INDEX_UNKNOWN_OPRETURN,
+    INDEX_BITASSETS,
 };
 
 TxDetails::TxDetails(QWidget *parent) :
@@ -42,10 +43,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
 {
     CTransaction tx = CTransaction(mtx);
 
-    // Get & set the hex
     strHex = EncodeHexTx(mtx);
-
-    // Get & set the JSON
     strTx = tx.ToString();
 
     // Display
@@ -61,6 +59,10 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // Set note
     if (tx.IsCoinBase()) {
         ui->labelNote->setText("This is a coinbase transaction.");
+    }
+    else
+    if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+        ui->labelNote->setText("This is a BitAsset creation transaction.");
     }
 
     // TODO more things to display?
@@ -173,6 +175,23 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             }
         }
     }
+
+    // Add BitAsset tx details
+    if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+        QTreeWidgetItem *subItem = new QTreeWidgetItem();
+        subItem->setText(0, "BitAsset Creation");
+        QString str = "Ticker: " + QString::fromStdString(tx.ticker) + "\n";
+        str += "Headline: " + QString::fromStdString(tx.headline) + "\n";
+        str += "Payload: " + QString::fromStdString(tx.payload.ToString()) + "\n";
+
+        int64_t nSupply = tx.vout.size() >= 2 ? tx.vout[1].nValue : 0;
+
+        str += "Supply: " + QString::number(nSupply) + "\n";
+
+        subItem->setText(1, str);
+        AddTreeItem(INDEX_BITASSETS, subItem);
+    }
+
     ui->treeWidgetDecoded->expandAll();
     ui->treeWidgetDecoded->resizeColumnToContents(0);
     ui->treeWidgetDecoded->resizeColumnToContents(1);
@@ -183,7 +202,7 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
     if (!item)
         return;
 
-    if (index < 0 || index > INDEX_UNKNOWN_OPRETURN)
+    if (index < 0 || index > INDEX_BITASSETS)
         return;
 
     QTreeWidgetItem *topItem = ui->treeWidgetDecoded->topLevelItem(index);
@@ -208,6 +227,9 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         else
         if (index == INDEX_UNKNOWN_OPRETURN)
             topItem->setText(0, "Unknown OP_RETURN");
+        else
+        if (index == INDEX_BITASSETS)
+            topItem->setText(0, "BitAssets");
 
         ui->treeWidgetDecoded->insertTopLevelItem(index, topItem);
     }
