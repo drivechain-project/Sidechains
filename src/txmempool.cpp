@@ -906,9 +906,9 @@ bool CCoinsViewMemPool::GetCoin(const COutPoint &outpoint, Coin &coin) const {
     CTransactionRef ptx = mempool.get(outpoint.hash);
     if (ptx) {
         if (outpoint.n < ptx->vout.size()) {
-            // TODO setting fBitAsset to false here. It doesn't seem like any
-            // callers will required that info.
-            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false, false);
+            // TODO setting fBitAsset info false / 0 here. It doesn't seem like any
+            // callers will require that info.
+            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false, false, 0);
             return true;
         } else {
             return false;

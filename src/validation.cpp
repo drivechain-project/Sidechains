@@ -1349,6 +1349,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
 {
     CAmount amountAssetIn = CAmount(0); // Track asset inputs
     int nControlN = -1;
+    uint32_t nAssetID = 0;
     if (!tx.IsCoinBase()) {
         txundo.vprevout.reserve(tx.vin.size());
         // mark inputs spent
@@ -1356,7 +1357,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
             txundo.vprevout.emplace_back();
             bool fBitAsset = false;
             bool fBitAssetControl = false;
-            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, &txundo.vprevout.back());
+            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, nAssetID, &txundo.vprevout.back());
             assert(is_spent);
 
             if (fBitAsset)
@@ -1368,7 +1369,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
     }
 
     // add outputs
-    AddCoins(inputs, tx, nHeight, amountAssetIn, nControlN);
+    AddCoins(inputs, tx, nHeight, nAssetID, amountAssetIn, nControlN);
 }
 
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
@@ -1648,7 +1649,8 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                 Coin coin;
                 bool fBitAsset = false;
                 bool fBitAssetControl = false;
-                bool is_spent = view.SpendCoin(out, fBitAsset, fBitAssetControl, &coin);
+                uint32_t nAssetID = 0;
+                bool is_spent = view.SpendCoin(out, fBitAsset, fBitAssetControl, nAssetID, &coin);
                 if (!is_spent || tx.vout[o] != coin.out || pindex->nHeight != coin.nHeight || is_coinbase != coin.fCoinBase) {
                     fClean = false; // transaction output mismatch
                 }
@@ -4797,8 +4799,9 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
             for (size_t x = 0; x < tx->vin.size(); x++) {
                 bool fBitAsset = false;
                 bool fBitAssetControl = false;
+                uint32_t nAssetID = 0;
                 Coin coin;
-                inputs.SpendCoin(tx->vin[x].prevout, fBitAsset, fBitAssetControl, &coin);
+                inputs.SpendCoin(tx->vin[x].prevout, fBitAsset, fBitAssetControl, nAssetID, &coin);
 
                 if (fBitAsset)
                     amountAssetIn += coin.out.nValue;
