@@ -70,6 +70,7 @@ extern const char * DEFAULT_WALLET_DAT;
 
 static const int64_t TIMESTAMP_MIN = 0;
 
+struct BitAssetTransactionData;
 class CBlockIndex;
 class CCoinControl;
 class COutput;
@@ -329,6 +330,7 @@ public:
 
     CAmount amountAssetIn;
     int nControlN;
+    uint32_t nAssetID;
 
     // memory only
     mutable bool fDebitCached;
@@ -393,6 +395,7 @@ public:
         nOrderPos = -1;
         amountAssetIn = CAmount(0);
         nControlN = -1;
+        nAssetID = 0;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -424,6 +427,7 @@ public:
         READWRITE(fSpent);
         READWRITE(amountAssetIn);
         READWRITE(nControlN);
+        READWRITE(nAssetID);
 
         if (ser_action.ForRead())
         {
@@ -716,7 +720,7 @@ private:
 
     /* Used by TransactionAddedToMemorypool/BlockConnected/Disconnected.
      * Should be called with pindexBlock and posInBlock if this is for a transaction that is included in a block. */
-    void SyncTransaction(const CTransactionRef& tx, const CBlockIndex *pindex = nullptr, int posInBlock = 0);
+    void SyncTransaction(const CTransactionRef& tx, const CBlockIndex *pindex = nullptr, int posInBlock = 0, CAmount amountAssetIn = CAmount(0), int nControlN = -1, uint32_t nAssetID = 0);
 
     /* the HD chain data model (external chain counters) */
     CHDChain hdChain;
@@ -953,9 +957,9 @@ public:
     bool AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose=true);
     bool LoadToWallet(const CWalletTx& wtxIn);
     void TransactionAddedToMempool(const CTransactionRef& tx) override;
-    void BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex *pindex, const std::vector<CTransactionRef>& vtxConflicted) override;
+    void BlockConnected(const std::map<uint256, BitAssetTransactionData>& mapAssetData, const std::shared_ptr<const CBlock>& pblock, const CBlockIndex *pindex, const std::vector<CTransactionRef>& vtxConflicted) override;
     void BlockDisconnected(const std::shared_ptr<const CBlock>& pblock) override;
-    bool AddToWalletIfInvolvingMe(const CTransactionRef& tx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate);
+    bool AddToWalletIfInvolvingMe(const CTransactionRef& tx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate, CAmount amountAssetIn = CAmount(0), int nControlN = -1, uint32_t nAssetID = 0);
     int64_t RescanFromTime(int64_t startTime, const WalletRescanReserver& reserver, bool update);
     CBlockIndex* ScanForWalletTransactions(CBlockIndex* pindexStart, CBlockIndex* pindexStop, const WalletRescanReserver& reserver, bool fUpdate = false);
     void TransactionRemovedFromMempool(const CTransactionRef &ptx) override;
@@ -991,7 +995,7 @@ public:
     bool CreateAsset(CTransactionRef& tx, std::string& strFail, const std::string& strTicker, const std::string& strHeadline, const uint256& hashPayload, const CAmount& nFee, const int64_t nSupply, const std::string& strControllerDest, const std::string& strGenesisDest);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state);
 
-    bool TransferAsset(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount);
+    bool TransferAsset(std::string& strFail, uint256& txidOut, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount);
     bool TransferAssetControl(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee);
 
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& entries);

@@ -84,7 +84,7 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi
     cachedCoinsUsage += it->second.coin.DynamicMemoryUsage();
 }
 
-void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint32_t nAssetID, const CAmount amountAssetIn, int nControlN, bool check) {
+void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint32_t nAssetID, const CAmount amountAssetIn, int nControlN, uint32_t nNewAssetID, bool check) {
     bool fCoinbase = tx.IsCoinBase();
     const uint256& txid = tx.GetHash();
 
@@ -98,7 +98,7 @@ void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint3
             bool overwrite = check ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
             bool fAsset = amountAssetIn > amountAssetOut;
             bool fControl = nControlN >= 0 && (int)i == nControlN;
-            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fAsset, fControl, nAssetID), overwrite);
+            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fAsset, fControl, nNewAssetID ? nNewAssetID : nAssetID), overwrite);
             if (fAsset)
                 amountAssetOut += tx.vout[i].nValue;
         }
@@ -113,7 +113,7 @@ void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint3
 
         for (size_t i = 0; i < tx.vout.size(); ++i) {
             bool overwrite = check ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
-            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fBAC && i < 2 ? true : false, fBAC && i == 0, nAssetID), overwrite);
+            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fBAC && i < 2 ? true : false, fBAC && i == 0, nNewAssetID ? nNewAssetID : nAssetID), overwrite);
         }
     }
 }

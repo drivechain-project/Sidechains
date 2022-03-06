@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+class BitAssetObj;
+class BitAsset;
 class CBlockIndex;
 class CCoinsViewDBCursor;
 class SidechainObj;
@@ -155,5 +157,22 @@ public:
     std::vector<SidechainWithdrawalBundle> GetWithdrawalBundles(const uint8_t & /* nSidechain */);
     std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
 };
+
+/** Access to the BitAsset database (blocks/BitAssets/) */
+class BitAssetDB : public CDBWrapper
+{
+public:
+    BitAssetDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    bool WriteBitAssets(const std::vector<BitAsset>& vAsset);
+
+    std::vector<BitAsset> GetAssets();
+
+    bool GetLastAssetID(uint32_t& nID);
+    bool WriteLastAssetID(const uint32_t nID);
+    bool GetAsset(const uint32_t nID, BitAsset& asset);
+
+    bool RemoveAsset(const uint32_t nID);
+};
+
 
 #endif // BITCOIN_TXDB_H

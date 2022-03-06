@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 
+struct BitAssetTransactionData;
 class CBlock;
 class CBlockIndex;
 struct CBlockLocator;
@@ -84,7 +85,7 @@ protected:
      *
      * Called on a background thread.
      */
-    virtual void BlockConnected(const std::shared_ptr<const CBlock> &block, const CBlockIndex *pindex, const std::vector<CTransactionRef> &txnConflicted) {}
+    virtual void BlockConnected(const std::map<uint256, BitAssetTransactionData>& mapAssetData, const std::shared_ptr<const CBlock> &block, const CBlockIndex *pindex, const std::vector<CTransactionRef> &txnConflicted) {}
     /**
      * Notifies listeners of a block being disconnected
      *
@@ -144,7 +145,7 @@ public:
 
     void UpdatedBlockTip(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload);
     void TransactionAddedToMempool(const CTransactionRef &);
-    void BlockConnected(const std::shared_ptr<const CBlock> &, const CBlockIndex *pindex, const std::shared_ptr<const std::vector<CTransactionRef>> &);
+    void BlockConnected(const std::map<uint256, BitAssetTransactionData>&, const std::shared_ptr<const CBlock> &, const CBlockIndex *pindex, const std::shared_ptr<const std::vector<CTransactionRef>> &);
     void BlockDisconnected(const std::shared_ptr<const CBlock> &);
     void SetBestChain(const CBlockLocator &);
     void Broadcast(int64_t nBestBlockTime, CConnman* connman);

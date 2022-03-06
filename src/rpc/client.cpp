@@ -152,6 +152,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     // BitAssets
     { "createasset", 3, "fee" },
     { "createasset", 4, "supply" },
+    { "transferasset", 3, "amount" },
 };
 
 class CRPCConvertTable

@@ -3871,8 +3871,24 @@ UniValue listmyassets(const JSONRPCRequest& request)
     UniValue ar(UniValue::VARR);
     for (const COutput& o : vOutput) {
         UniValue obj(UniValue::VOBJ);
-        obj.pushKV("txid", o.tx->GetHash().ToString());
-        obj.pushKV("desc", o.ToString());
+        obj.pushKV("assetamount", o.tx->tx->vout[o.i].nValue);
+        obj.pushKV("outputtxid", o.tx->GetHash().ToString());
+        obj.pushKV("outputn", o.i);
+        obj.pushKV("confirmations", o.nDepth);
+        obj.pushKV("amountassetin", o.tx->amountAssetIn);
+        obj.pushKV("ncontroln", o.tx->nControlN);
+        obj.pushKV("id", (uint64_t)o.tx->nAssetID);
+
+        // Get BitAssetDB data
+        BitAsset asset;
+        if (!passettree->GetAsset(o.tx->nAssetID, asset))
+            throw JSONRPCError(RPC_MISC_ERROR, "Failed to load asset data!");
+
+        obj.pushKV("ticker", asset.strTicker);
+        obj.pushKV("headline", asset.strHeadline);
+        obj.pushKV("payloadhash", asset.payload.ToString());
+        obj.pushKV("creationtxid", asset.txid.ToString());
+
         ar.push_back(obj);
     }
     return ar;
@@ -3924,7 +3940,7 @@ UniValue transferasset(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
     // Amount
-    CAmount nAmount = AmountFromValue(request.params[3]);
+    int64_t nAmount = request.params[3].get_int64();
     if (nAmount <= 0) {
         std::string strError = "Invalid amount";
         LogPrintf("%s: %s\n", __func__, strError);
@@ -3936,15 +3952,16 @@ UniValue transferasset(const JSONRPCRequest& request)
 
     LOCK2(cs_main, pwallet->cs_wallet);
 
+    uint256 txidOut;
     std::string strFail = "";
-    if (!pwallet->TransferAsset(strFail, txid, dest, nFee, nAmount))
+    if (!pwallet->TransferAsset(strFail, txidOut, txid, dest, nFee, nAmount))
     {
         LogPrintf("%s: %s\n", __func__, strFail);
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
     UniValue response(UniValue::VOBJ);
-    response.pushKV("txid", uint256().ToString());
+    response.pushKV("txid", txidOut.ToString());
     return response;
 }
 

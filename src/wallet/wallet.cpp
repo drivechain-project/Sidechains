@@ -953,6 +953,19 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose)
             wtx.SetTx(wtxIn.tx);
             fUpdated = true;
         }
+
+        if (wtxIn.amountAssetIn != wtx.amountAssetIn) {
+            wtx.amountAssetIn = wtxIn.amountAssetIn;
+            fUpdated = true;
+        }
+        if (wtxIn.nControlN != wtx.nControlN) {
+            wtx.nControlN = wtxIn.nControlN;
+            fUpdated = true;
+        }
+        if (wtxIn.nAssetID != wtx.nAssetID) {
+            wtx.nAssetID = wtxIn.nAssetID;
+            fUpdated = true;
+        }
     }
 
     //// debug print
@@ -1015,7 +1028,7 @@ bool CWallet::LoadToWallet(const CWalletTx& wtxIn)
  * Abandoned state should probably be more carefully tracked via different
  * posInBlock signals or by checking mempool presence when necessary.
  */
-bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate)
+bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate, CAmount amountAssetIn, int nControlN, uint32_t nAssetID)
 {
     const CTransaction& tx = *ptx;
     {
@@ -1063,6 +1076,9 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlockI
             }
 
             CWalletTx wtx(this, ptx);
+            wtx.amountAssetIn = amountAssetIn;
+            wtx.nControlN = nControlN;
+            wtx.nAssetID = nAssetID;
 
             // Get merkle branch if transaction was found in a block
             if (pIndex != nullptr)
@@ -1203,10 +1219,10 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
     }
 }
 
-void CWallet::SyncTransaction(const CTransactionRef& ptx, const CBlockIndex *pindex, int posInBlock) {
+void CWallet::SyncTransaction(const CTransactionRef& ptx, const CBlockIndex *pindex, int posInBlock, CAmount amountAssetIn, int nControlN, uint32_t nAssetID) {
     const CTransaction& tx = *ptx;
 
-    if (!AddToWalletIfInvolvingMe(ptx, pindex, posInBlock, true))
+    if (!AddToWalletIfInvolvingMe(ptx, pindex, posInBlock, true, amountAssetIn, nControlN, nAssetID))
         return; // Not one of ours
 
     // If a transaction changes 'conflicted' state, that changes the balance
@@ -1238,7 +1254,7 @@ void CWallet::TransactionRemovedFromMempool(const CTransactionRef &ptx) {
     }
 }
 
-void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex *pindex, const std::vector<CTransactionRef>& vtxConflicted) {
+void CWallet::BlockConnected(const std::map<uint256, BitAssetTransactionData>& mapAssetData, const std::shared_ptr<const CBlock>& pblock, const CBlockIndex *pindex, const std::vector<CTransactionRef>& vtxConflicted) {
     LOCK2(cs_main, cs_wallet);
     // TODO: Temporarily ensure that mempool removals are notified before
     // connected transactions.  This shouldn't matter, but the abandoned
@@ -1253,7 +1269,13 @@ void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const 
         TransactionRemovedFromMempool(ptx);
     }
     for (size_t i = 0; i < pblock->vtx.size(); i++) {
-        SyncTransaction(pblock->vtx[i], pindex, i);
+        std::map<uint256, BitAssetTransactionData>::const_iterator it;
+        it = mapAssetData.find(pblock->vtx[i]->GetHash());
+        if (it != mapAssetData.end()) {
+            SyncTransaction(pblock->vtx[i], pindex, i, it->second.amountAssetIn, it->second.nControlN, it->second.nAssetID);
+        } else {
+            SyncTransaction(pblock->vtx[i], pindex, i);
+        }
         TransactionRemovedFromMempool(pblock->vtx[i]);
     }
 
@@ -2168,6 +2190,7 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
         const uint256& wtxid = entry.first;
         const CWalletTx* pcoin = &entry.second;
 
+        // TODO only asset outputs - make others available
         // Skip BitAsset related outputs
         if (pcoin->amountAssetIn > 0 || pcoin->tx->nVersion == TRANSACTION_BITASSET_CREATE_VERSION)
             continue;
@@ -3251,7 +3274,7 @@ bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::
     return true;
 }
 
-bool CWallet::TransferAsset(std::string& strFail, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount)
+bool CWallet::TransferAsset(std::string& strFail, uint256& txidOut, const uint256& txid, const CTxDestination& dest, const CAmount& nFee, const CAmount& nAmount)
 {
     strFail = "Unknown error!";
 
@@ -3431,6 +3454,8 @@ bool CWallet::TransferAsset(std::string& strFail, const uint256& txid, const CTx
         strFail = "Failed to commit BitAsset creation transaction! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
+
+    txidOut = walletTx.tx->GetHash();
 
     return true;
 }

@@ -258,6 +258,7 @@ void Shutdown()
         pcoinsdbview.reset();
         pblocktree.reset();
         psidechaintree.reset();
+        passettree.reset();
     }
 #ifdef ENABLE_WALLET
     StopWallets();
@@ -1396,6 +1397,8 @@ bool AppInitMain()
     fReindex = gArgs.GetBoolArg("-reindex", false);
     bool fReindexChainState = gArgs.GetBoolArg("-reindex-chainstate", false);
 
+    // TODO update cache sizes
+
     // cache size calculations
     int64_t nTotalCache = (gArgs.GetArg("-dbcache", nDefaultDbCache) << 20);
     nTotalCache = std::max(nTotalCache, nMinDbCache << 20); // total cache cannot be less than nMinDbCache
@@ -1404,9 +1407,13 @@ bool AppInitMain()
     nBlockTreeDBCache = std::min(nBlockTreeDBCache, (gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX) ? nMaxBlockDBAndTxIndexCache : nMaxBlockDBCache) << 20);
     nTotalCache -= nBlockTreeDBCache;
     int64_t nSidechainTreeDBCache = nTotalCache / 8;
-    if (nSidechainTreeDBCache > (1 << 21) && !gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX))
+    if (nSidechainTreeDBCache > (1 << 21))
         nSidechainTreeDBCache = (1 << 21);
     nTotalCache -= nSidechainTreeDBCache;
+    int64_t nBitAssetDBCache = nTotalCache / 8;
+    if (nBitAssetDBCache > (1 << 21))
+        nBitAssetDBCache = (1 << 21);
+    nTotalCache -= nBitAssetDBCache;
     int64_t nCoinDBCache = std::min(nTotalCache / 2, (nTotalCache / 4) + (1 << 23)); // use 25%-50% of the remainder for disk cache
     nCoinDBCache = std::min(nCoinDBCache, nMaxCoinsDBCache << 20); // cap total coins db cache
     nTotalCache -= nCoinDBCache;
@@ -1436,6 +1443,7 @@ bool AppInitMain()
                 pblocktree.reset();
                 pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReset));
                 psidechaintree.reset(new CSidechainTreeDB(nSidechainTreeDBCache, false, fReset));
+                passettree.reset(new BitAssetDB(nBitAssetDBCache, false, fReset));
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);

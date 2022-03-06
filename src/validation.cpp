@@ -93,7 +93,75 @@ enum DisconnectResult
     DISCONNECT_FAILED   // Something else went wrong.
 };
 
-class ConnectTrace;
+struct PerBlockConnectTrace {
+    std::map<uint256, BitAssetTransactionData> mapAssetData;
+    CBlockIndex* pindex = nullptr;
+    std::shared_ptr<const CBlock> pblock;
+    std::shared_ptr<std::vector<CTransactionRef>> conflictedTxs;
+    PerBlockConnectTrace() : conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()) {}
+};
+/**
+ * Used to track blocks whose transactions were applied to the UTXO state as a
+ * part of a single ActivateBestChainStep call.
+ *
+ * This class also tracks transactions that are removed from the mempool as
+ * conflicts (per block) and can be used to pass all those transactions
+ * through SyncTransaction.
+ *
+ * This class assumes (and asserts) that the conflicted transactions for a given
+ * block are added via mempool callbacks prior to the BlockConnected() associated
+ * with those transactions. If any transactions are marked conflicted, it is
+ * assumed that an associated block will always be added.
+ *
+ * This class is single-use, once you call GetBlocksConnected() you have to throw
+ * it away and make a new one.
+ */
+class ConnectTrace {
+private:
+    std::vector<PerBlockConnectTrace> blocksConnected;
+    CTxMemPool &pool;
+
+public:
+    explicit ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool) {
+        pool.NotifyEntryRemoved.connect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    }
+
+    ~ConnectTrace() {
+        pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    }
+
+    void BlockConnected(CBlockIndex* pindex, std::shared_ptr<const CBlock> pblock) {
+        assert(!blocksConnected.back().pindex);
+        assert(pindex);
+        assert(pblock);
+        blocksConnected.back().pindex = pindex;
+        blocksConnected.back().pblock = std::move(pblock);
+        blocksConnected.emplace_back();
+    }
+
+    std::vector<PerBlockConnectTrace>& GetBlocksConnected() {
+        // We always keep one extra block at the end of our list because
+        // blocks are added after all the conflicted transactions have
+        // been filled in. Thus, the last entry should always be an empty
+        // one waiting for the transactions from the next block. We pop
+        // the last entry here to make sure the list we return is sane.
+        assert(!blocksConnected.back().pindex);
+        assert(blocksConnected.back().conflictedTxs->empty());
+        blocksConnected.pop_back();
+        return blocksConnected;
+    }
+
+    void NotifyEntryRemoved(CTransactionRef txRemoved, MemPoolRemovalReason reason) {
+        assert(!blocksConnected.back().pindex);
+        if (reason == MemPoolRemovalReason::CONFLICT) {
+            blocksConnected.back().conflictedTxs->emplace_back(std::move(txRemoved));
+        }
+    }
+
+    void SetBitAssetData(const uint256& txid, const BitAssetTransactionData& data) {
+        blocksConnected.back().mapAssetData[txid] = data;
+    }
+};
 
 /**
  * CChainState stores and provides an API to update our local knowledge of the
@@ -165,7 +233,7 @@ public:
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
     bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fCheckBMM = true);
+                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fCheckBMM = true, ConnectTrace* connectTrace = nullptr);
 
     // Block disconnection on our pcoinsTip:
     bool DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool);
@@ -292,6 +360,7 @@ std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
 std::unique_ptr<CBlockTreeDB> pblocktree;
 std::unique_ptr<CSidechainTreeDB> psidechaintree;
+std::unique_ptr<BitAssetDB> passettree;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -1345,11 +1414,11 @@ void CChainState::InvalidBlockFound(CBlockIndex *pindex, const CValidationState 
     }
 }
 
-void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txundo, int nHeight)
+void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txundo, int nHeight, CAmount& amountAssetInOut, int& nControlNOut, uint32_t& nAssetIDOut, uint32_t nNewAssetIDIn)
 {
-    CAmount amountAssetIn = CAmount(0); // Track asset inputs
-    int nControlN = -1;
-    uint32_t nAssetID = 0;
+    amountAssetInOut = CAmount(0); // Track asset inputs
+    nControlNOut = -1;
+    nAssetIDOut = 0;
     if (!tx.IsCoinBase()) {
         txundo.vprevout.reserve(tx.vin.size());
         // mark inputs spent
@@ -1357,25 +1426,19 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
             txundo.vprevout.emplace_back();
             bool fBitAsset = false;
             bool fBitAssetControl = false;
-            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, nAssetID, &txundo.vprevout.back());
+            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, nAssetIDOut, &txundo.vprevout.back());
             assert(is_spent);
 
             if (fBitAsset)
-                amountAssetIn += txundo.vprevout.back().out.nValue;
+                amountAssetInOut += txundo.vprevout.back().out.nValue;
 
             if (fBitAssetControl)
-                nControlN = x;
+                nControlNOut = x;
         }
     }
 
     // add outputs
-    AddCoins(inputs, tx, nHeight, nAssetID, amountAssetIn, nControlN);
-}
-
-void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
-{
-    CTxUndo txundo;
-    UpdateCoins(tx, inputs, txundo, nHeight);
+    AddCoins(inputs, tx, nHeight, nAssetIDOut, amountAssetInOut, nControlNOut, nNewAssetIDIn);
 }
 
 bool CScriptCheck::operator()() {
@@ -1637,6 +1700,21 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
         bool is_coinbase = tx.IsCoinBase();
+
+        // Undo BitAssetDB updates
+        if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+            // Undo BitAsset creation & revert asset ID #
+            uint32_t nIDLast = 0;
+            passettree->GetLastAssetID(nIDLast);
+            if (!passettree->WriteLastAssetID(nIDLast - 1)) {
+                error("DisconnectBlock(): Failed to undo BitAssetDB asset ID #!");
+                return DISCONNECT_FAILED;
+            }
+            if (!passettree->RemoveAsset(nIDLast)) {
+                error("DisconnectBlock(): Failed to remove BitAssetDB asset!");
+                return DISCONNECT_FAILED;
+            }
+        }
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
@@ -1934,7 +2012,7 @@ static int64_t nBlocksTotal = 0;
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
  *  can fail if those validity checks fail (among other reasons). */
 bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fCheckBMM)
+                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fCheckBMM, ConnectTrace* connectTrace)
 {
     AssertLockHeld(cs_main);
     assert(pindex);
@@ -2044,6 +2122,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     std::multimap<std::pair<CScript, CAmount>, uint256> mapRefundOutputs;
     std::vector<SidechainWithdrawal> vRefundedWithdrawal;
     std::set<uint256> setRefundWithdrawalID;
+    std::vector<BitAsset> vAsset;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2231,11 +2310,46 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             control.Add(vChecks);
         }
 
+        // New asset created - set asset ID # and update BitAssetDB
+        uint32_t nNewAssetID = 0;
+        if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+            uint32_t nIDLast = 0;
+            passettree->GetLastAssetID(nIDLast);
+
+            BitAsset asset;
+            asset.nID = nIDLast + 1;
+            asset.strTicker = tx.ticker;
+            asset.strHeadline = tx.headline;
+            asset.payload = tx.payload;
+            asset.txid = tx.GetHash();
+
+            vAsset.push_back(asset);
+
+            // Update latest BitAsset ID #
+            if (!fJustCheck && !passettree->WriteLastAssetID(asset.nID))
+                return error("%s: Failed to update last BitAsset ID #!\n", __func__);
+
+            // Copy new asset ID, we will pass it to CoinDB when we UpdateCoins
+            nNewAssetID = asset.nID;
+        }
+
         CTxUndo undoDummy;
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+
+        CAmount amountAssetIn = CAmount(0);
+        int nControlN = -1;
+        uint32_t nAssetID = 0;
+        UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight, amountAssetIn, nControlN, nAssetID, nNewAssetID);
+
+        BitAssetTransactionData data;
+        data.amountAssetIn = amountAssetIn;
+        data.nControlN = nControlN;
+        data.nAssetID = nNewAssetID ? nNewAssetID : nAssetID;
+        data.txid = tx.GetHash();
+        if (connectTrace && (amountAssetIn > 0 || tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION))
+            connectTrace->SetBitAssetData(tx.GetHash(), data);
     }
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
@@ -2540,6 +2654,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
     }
 
+    // Write asset objects to db
+    if (vAsset.size()) {
+        if (!passettree->WriteBitAssets(vAsset))
+            return state.Error("Failed to write BitAsset index!");
+    }
+
     assert(pindex->phashBlock);
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
@@ -2804,70 +2924,6 @@ static int64_t nTimeFlush = 0;
 static int64_t nTimeChainState = 0;
 static int64_t nTimePostConnect = 0;
 
-struct PerBlockConnectTrace {
-    CBlockIndex* pindex = nullptr;
-    std::shared_ptr<const CBlock> pblock;
-    std::shared_ptr<std::vector<CTransactionRef>> conflictedTxs;
-    PerBlockConnectTrace() : conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()) {}
-};
-/**
- * Used to track blocks whose transactions were applied to the UTXO state as a
- * part of a single ActivateBestChainStep call.
- *
- * This class also tracks transactions that are removed from the mempool as
- * conflicts (per block) and can be used to pass all those transactions
- * through SyncTransaction.
- *
- * This class assumes (and asserts) that the conflicted transactions for a given
- * block are added via mempool callbacks prior to the BlockConnected() associated
- * with those transactions. If any transactions are marked conflicted, it is
- * assumed that an associated block will always be added.
- *
- * This class is single-use, once you call GetBlocksConnected() you have to throw
- * it away and make a new one.
- */
-class ConnectTrace {
-private:
-    std::vector<PerBlockConnectTrace> blocksConnected;
-    CTxMemPool &pool;
-
-public:
-    explicit ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool) {
-        pool.NotifyEntryRemoved.connect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
-    }
-
-    ~ConnectTrace() {
-        pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
-    }
-
-    void BlockConnected(CBlockIndex* pindex, std::shared_ptr<const CBlock> pblock) {
-        assert(!blocksConnected.back().pindex);
-        assert(pindex);
-        assert(pblock);
-        blocksConnected.back().pindex = pindex;
-        blocksConnected.back().pblock = std::move(pblock);
-        blocksConnected.emplace_back();
-    }
-
-    std::vector<PerBlockConnectTrace>& GetBlocksConnected() {
-        // We always keep one extra block at the end of our list because
-        // blocks are added after all the conflicted transactions have
-        // been filled in. Thus, the last entry should always be an empty
-        // one waiting for the transactions from the next block. We pop
-        // the last entry here to make sure the list we return is sane.
-        assert(!blocksConnected.back().pindex);
-        assert(blocksConnected.back().conflictedTxs->empty());
-        blocksConnected.pop_back();
-        return blocksConnected;
-    }
-
-    void NotifyEntryRemoved(CTransactionRef txRemoved, MemPoolRemovalReason reason) {
-        assert(!blocksConnected.back().pindex);
-        if (reason == MemPoolRemovalReason::CONFLICT) {
-            blocksConnected.back().conflictedTxs->emplace_back(std::move(txRemoved));
-        }
-    }
-};
 
 /**
  * Connect a new block to chainActive. pblock is either nullptr or a pointer to a CBlock
@@ -2896,7 +2952,7 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     LogPrint(BCLog::BENCH, "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
     {
         CCoinsViewCache view(pcoinsTip.get());
-        bool rv = ConnectBlock(blockConnecting, state, pindexNew, view, chainparams);
+        bool rv = ConnectBlock(blockConnecting, state, pindexNew, view, chainparams, false, true, &connectTrace);
         GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv) {
             if (state.IsInvalid())
@@ -3161,7 +3217,7 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
 
             for (const PerBlockConnectTrace& trace : connectTrace.GetBlocksConnected()) {
                 assert(trace.pblock && trace.pindex);
-                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, trace.conflictedTxs);
+                GetMainSignals().BlockConnected(trace.mapAssetData, trace.pblock, trace.pindex, trace.conflictedTxs);
             }
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).

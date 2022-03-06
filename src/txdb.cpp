@@ -34,6 +34,9 @@ static const char DB_LAST_BLOCK = 'l';
 static const char DB_LAST_SIDECHAIN_DEPOSIT = 'x';
 static const char DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE = 'w';
 
+static const char DB_ASSET = 'A';
+static const char DB_ASSET_LAST_ID = 'I';
+
 namespace {
 
 struct CoinEntry {
@@ -578,6 +581,68 @@ bool CSidechainTreeDB::HaveWithdrawalBundle(const uint256& hashWithdrawalBundle)
         return true;
 
     return false;
+}
+
+BitAssetDB::BitAssetDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "BitAssets", nCacheSize, fMemory, fWipe) { }
+
+bool BitAssetDB::WriteBitAssets(const std::vector<BitAsset>& vAsset)
+{
+    CDBBatch batch(*this);
+    for (const BitAsset& asset : vAsset) {
+        std::pair<char, uint32_t> key = std::make_pair(DB_ASSET, asset.nID);
+        batch.Write(key, asset);
+    }
+    return WriteBatch(batch, true);
+}
+
+std::vector<BitAsset> BitAssetDB::GetAssets()
+{
+    std::ostringstream ss;
+    ::Serialize(ss, std::make_pair(DB_ASSET, 0));
+
+    std::vector<BitAsset> vAsset;
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+    while (pcursor->Valid()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint32_t> key;
+        BitAsset asset;
+        if (pcursor->GetKey(key) && key.first == DB_ASSET) {
+            if (pcursor->GetValue(asset))
+                vAsset.push_back(asset);
+        }
+
+        pcursor->Next();
+    }
+    return vAsset;
+}
+
+bool BitAssetDB::GetLastAssetID(uint32_t& nID)
+{
+    // Look up the last asset ID (in chronological order)
+    if (!Read(DB_ASSET_LAST_ID, nID))
+        return false;
+
+    return true;
+}
+
+bool BitAssetDB::WriteLastAssetID(const uint32_t nID)
+{
+    return Write(DB_ASSET_LAST_ID, nID);
+}
+
+bool BitAssetDB::RemoveAsset(const uint32_t nID)
+{
+    std::pair<char, uint32_t> key = std::make_pair(DB_ASSET, nID);
+    return Erase(key);
+}
+
+bool BitAssetDB::GetAsset(const uint32_t nID, BitAsset& asset)
+{
+    return Read(std::make_pair(DB_ASSET, nID), asset);
 }
 
 namespace {

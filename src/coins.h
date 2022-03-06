@@ -334,7 +334,7 @@ private:
 // an overwrite.
 // TODO: pass in a boolean to limit these possible overwrites to known
 // (pre-BIP34) cases.
-void AddCoins(CCoinsViewCache& cache, const CTransaction& tx, int nHeight, uint32_t nAssetID, const CAmount amountAssetIn, int nControlN = -1, bool check = false);
+void AddCoins(CCoinsViewCache& cache, const CTransaction& tx, int nHeight, uint32_t nAssetID, const CAmount amountAssetIn, int nControlN = -1, uint32_t nNewAssetID = 0, bool check = false);
 
 //! Utility function to find any unspent output with a given txid.
 // This function can be quite expensive because in the event of a transaction

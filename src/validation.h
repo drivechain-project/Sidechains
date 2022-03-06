@@ -33,6 +33,8 @@
 #include <atomic>
 
 class BMMCache;
+class BitAssetDB;
+class ConnectTrace;
 class CBlockIndex;
 class CBlockTreeDB;
 class CSidechainTreeDB;
@@ -43,11 +45,19 @@ class CConnman;
 class CScriptCheck;
 class CBlockPolicyEstimator;
 class CTxMemPool;
+class CTxUndo;
 class CValidationState;
 struct ChainTxData;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
+
+struct BitAssetTransactionData {
+    uint256 txid;
+    CAmount amountAssetIn;
+    int nControlN;
+    uint32_t nAssetID;
+};
 
 /** Default for -whitelistrelay. */
 static const bool DEFAULT_WHITELISTRELAY = true;
@@ -337,7 +347,7 @@ int VersionBitsTipStateSinceHeight(const Consensus::Params& params, Consensus::D
 
 
 /** Apply the effects of this transaction on the UTXO set represented by view */
-void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
+void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo& undo, int nHeight, CAmount& amountAssetInOut, int& nControlNOut, uint32_t& nAssetIDOut, const uint32_t nNewAssetIDIn = 0);
 
 /** Transaction validation functions */
 
@@ -493,6 +503,8 @@ extern std::unique_ptr<CBlockTreeDB> pblocktree;
 
 /** Global variable that points to the active sidechain tree (protected by cs_main) */
 extern std::unique_ptr<CSidechainTreeDB> psidechaintree;
+/** Global variable that points to the active BitAsset tree (protected by cs_main) */
+extern std::unique_ptr<BitAssetDB> passettree;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().

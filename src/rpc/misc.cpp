@@ -784,6 +784,35 @@ UniValue formatdepositaddress(const JSONRPCRequest& request)
     return strDepositAddress;
 }
 
+UniValue listassets(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listassets\n"
+            "\nList BitAssets\n"
+            "\nResult:\n"
+            "Array of BitAssets\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listassets", "")
+            + HelpExampleRpc("listassets", "")
+        );
+
+    std::vector<BitAsset> vAsset = passettree->GetAssets();
+
+    UniValue result(UniValue::VARR);
+    for (const BitAsset& b : vAsset) {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("id", (uint64_t)b.nID);
+        obj.pushKV("ticker", b.strTicker);
+        obj.pushKV("headline", b.strHeadline);
+        obj.pushKV("payload", b.payload.ToString());
+        obj.pushKV("txid", b.txid.ToString());
+        result.push_back(obj);
+    }
+
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
   //  --------------------- ------------------------    -----------------------    ----------
@@ -812,6 +841,8 @@ static const CRPCCommand commands[] =
     { "sidechain",          "getwithdrawal",                &getwithdrawal,                 {"id"}},
     { "sidechain",          "formatdepositaddress",         &formatdepositaddress,          {"address"}},
 
+    /* BitAssets */
+    { "BitAssets",          "listassets",                   &listassets,                    {}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)

@@ -116,6 +116,37 @@ struct SidechainObj {
     virtual std::string ToString(void) const;
 };
 
+struct BitAssetObj {
+    char assetop;
+
+    BitAssetObj(void) { }
+    virtual ~BitAssetObj(void) { }
+
+    CScript GetScript(void) const;
+};
+
+/**
+ * BitAsset
+ */
+struct BitAsset : public BitAssetObj {
+    uint32_t nID;
+    std::string strTicker;
+    std::string strHeadline;
+    uint256 payload;
+    uint256 txid;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(nID);
+        READWRITE(strTicker);
+        READWRITE(strHeadline);
+        READWRITE(payload);
+        READWRITE(txid);
+    }
+};
+
 /**
  * Sidechain individual withdrawal database object
  */
