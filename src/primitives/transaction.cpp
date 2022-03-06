@@ -86,7 +86,7 @@ CAmount CTransaction::GetValueOut() const
 
     // Skip the controller and genesis output of a BitAsset creation
     std::vector<CTxOut>::const_iterator it;
-    if (fBitAsset && vout.size() > 2)
+    if (fBitAsset && vout.size() >= 2)
         it = vout.begin() + 2;
     else
         it = vout.begin();
