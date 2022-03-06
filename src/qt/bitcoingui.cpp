@@ -128,6 +128,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     helpMessageDialog(0),
     prevBlocks(0),
     spinnerFrame(0),
+    myAssetsAction(0),
+    browseAssetsAction(0),
+    createAssetAction(0),
     platformStyle(_platformStyle)
 {
     QSettings settings;
@@ -330,6 +333,27 @@ void BitcoinGUI::createActions()
     historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(historyAction);
 
+    myAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&My Assets"), this);
+    myAssetsAction->setStatusTip(tr("Show BitAssets in the wallet"));
+    myAssetsAction->setToolTip(myAssetsAction->statusTip());
+    myAssetsAction->setCheckable(true);
+    myAssetsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
+    tabGroup->addAction(myAssetsAction);
+
+    browseAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Browse Assets"), this);
+    browseAssetsAction->setStatusTip(tr("Browse all BitAssets"));
+    browseAssetsAction->setToolTip(browseAssetsAction->statusTip());
+    browseAssetsAction->setCheckable(true);
+    browseAssetsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+    tabGroup->addAction(browseAssetsAction);
+
+    createAssetAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Create Asset"), this);
+    createAssetAction->setStatusTip(tr("Create a new BitAsset"));
+    createAssetAction->setToolTip(createAssetAction->statusTip());
+    createAssetAction->setCheckable(true);
+    createAssetAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
+    tabGroup->addAction(createAssetAction);
+
 #ifdef ENABLE_WALLET
     connect(sidechainAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sidechainAction, SIGNAL(triggered()), this, SLOT(gotoSidechainPage()));
@@ -348,6 +372,12 @@ void BitcoinGUI::createActions()
     connect(receiveCoinsMenuAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
+    connect(myAssetsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(myAssetsAction, SIGNAL(triggered()), this, SLOT(gotoMyAssetsPage()));
+    connect(browseAssetsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(browseAssetsAction, SIGNAL(triggered()), this, SLOT(gotoBrowseAssetsPage()));
+    connect(createAssetAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(createAssetAction, SIGNAL(triggered()), this, SLOT(gotoCreateAssetPage()));
 #endif // ENABLE_WALLET
 
     quitAction = new QAction(platformStyle->TextColorIcon(":/icons/quit"), tr("E&xit"), this);
@@ -501,6 +531,9 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
+        toolbar->addAction(myAssetsAction);
+        toolbar->addAction(browseAssetsAction);
+        toolbar->addAction(createAssetAction);
         overviewAction->setChecked(true);
     }
 }
@@ -608,6 +641,9 @@ void BitcoinGUI::setWalletActionsEnabled(bool enabled)
     usedReceivingAddressesAction->setEnabled(enabled);
     sidechainAction->setEnabled(enabled);
     openAction->setEnabled(enabled);
+    myAssetsAction->setEnabled(enabled);
+    browseAssetsAction->setEnabled(enabled);
+    createAssetAction->setEnabled(enabled);
 }
 
 void BitcoinGUI::createTrayIcon(const NetworkStyle *networkStyle)
@@ -763,6 +799,24 @@ void BitcoinGUI::gotoSidechainPage()
 void BitcoinGUI::showHashCalcDialog()
 {
     hashCalcDialog->show();
+}
+
+void BitcoinGUI::gotoMyAssetsPage()
+{
+    myAssetsAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoMyAssetsPage();
+}
+
+void BitcoinGUI::gotoBrowseAssetsPage()
+{
+    browseAssetsAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoBrowseAssetsPage();
+}
+
+void BitcoinGUI::gotoCreateAssetPage()
+{
+    createAssetAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoCreateAssetPage();
 }
 
 void BitcoinGUI::showBlockExplorerDialog()

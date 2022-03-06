@@ -78,6 +78,13 @@ public Q_SLOTS:
     /** Switch to sidechain page */
     void gotoSidechainPage();
 
+    /** Switch to My Assets page */
+    void gotoMyAssetsPage();
+    /** Switch to Browse Assets page */
+    void gotoBrowseAssetsPage();
+    /** Switch to Create Asset page */
+    void gotoCreateAssetPage();
+
     /** Encrypt the wallet */
     void encryptWallet(bool status);
     /** Backup the wallet */

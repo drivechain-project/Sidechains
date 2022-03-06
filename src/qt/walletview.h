@@ -20,6 +20,9 @@ class SidechainPage;
 class TransactionView;
 class WalletModel;
 class AddressBookPage;
+class MyAssetsPage;
+class BrowseAssetsPage;
+class CreateAssetPage;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
@@ -66,6 +69,9 @@ private:
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
     SidechainPage *sidechainPage;
+    MyAssetsPage *myAssetsPage;
+    BrowseAssetsPage *browseAssetsPage;
+    CreateAssetPage *createAssetPage;
 
     TransactionView *transactionView;
 
@@ -88,6 +94,12 @@ public Q_SLOTS:
     void gotoVerifyMessageTab(QString addr = "");
     /** Switch to sidechain page */
     void gotoSidechainPage();
+    /** Switch to My Assets page */
+    void gotoMyAssetsPage();
+    /** Switch to Browse Assets page */
+    void gotoBrowseAssetsPage();
+    /** Switch to Create Asset page */
+    void gotoCreateAssetPage();
 
     /** Show incoming transaction notification for new transactions.
 

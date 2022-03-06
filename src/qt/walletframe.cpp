@@ -159,6 +159,25 @@ void WalletFrame::gotoSidechainPage()
         i.value()->gotoSidechainPage();
 }
 
+void WalletFrame::gotoMyAssetsPage()
+{
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->gotoMyAssetsPage();
+}
+
+void WalletFrame::gotoBrowseAssetsPage()
+{
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->gotoBrowseAssetsPage();}
+
+void WalletFrame::gotoCreateAssetPage()
+{
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->gotoCreateAssetPage();}
+
 void WalletFrame::encryptWallet(bool status)
 {
     WalletView *walletView = currentWalletView();

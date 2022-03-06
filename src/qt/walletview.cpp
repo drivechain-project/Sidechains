@@ -7,8 +7,11 @@
 #include <qt/addressbookpage.h>
 #include <qt/askpassphrasedialog.h>
 #include <qt/bitcoingui.h>
+#include <qt/browseassetspage.h>
 #include <qt/clientmodel.h>
+#include <qt/createassetpage.h>
 #include <qt/guiutil.h>
+#include <qt/myassetspage.h>
 #include <qt/optionsmodel.h>
 #include <qt/overviewpage.h>
 #include <qt/platformstyle.h>
@@ -56,6 +59,13 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
 
     sidechainPage = new SidechainPage(platformStyle, this);
 
+    myAssetsPage = new MyAssetsPage(platformStyle);
+    browseAssetsPage = new BrowseAssetsPage(platformStyle);
+    createAssetPage = new CreateAssetPage(platformStyle);
+
+    addWidget(myAssetsPage);
+    addWidget(browseAssetsPage);
+    addWidget(createAssetPage);
     addWidget(sidechainPage);
     addWidget(overviewPage);
     addWidget(transactionsPage);
@@ -107,6 +117,9 @@ void WalletView::setClientModel(ClientModel *_clientModel)
     overviewPage->setClientModel(_clientModel);
     sendCoinsPage->setClientModel(_clientModel);
     sidechainPage->setClientModel(_clientModel);
+    myAssetsPage->setClientModel(_clientModel);
+    browseAssetsPage->setClientModel(_clientModel);
+    createAssetPage->setClientModel(_clientModel);
 }
 
 void WalletView::setWalletModel(WalletModel *_walletModel)
@@ -121,6 +134,8 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
     usedReceivingAddressesPage->setModel(_walletModel ? _walletModel->getAddressTableModel() : nullptr);
     usedSendingAddressesPage->setModel(_walletModel ? _walletModel->getAddressTableModel() : nullptr);
     sidechainPage->setWalletModel(_walletModel);
+    myAssetsPage->setWalletModel(_walletModel);
+    createAssetPage->setWalletModel(_walletModel);
 
     if (_walletModel)
     {
@@ -216,6 +231,21 @@ void WalletView::gotoVerifyMessageTab(QString addr)
 void WalletView::gotoSidechainPage()
 {
     setCurrentWidget(sidechainPage);
+}
+
+void WalletView::gotoMyAssetsPage()
+{
+    setCurrentWidget(myAssetsPage);
+}
+
+void WalletView::gotoBrowseAssetsPage()
+{
+    setCurrentWidget(browseAssetsPage);
+}
+
+void WalletView::gotoCreateAssetPage()
+{
+    setCurrentWidget(createAssetPage);
 }
 
 bool WalletView::handlePaymentRequest(const SendCoinsRecipient& recipient)
