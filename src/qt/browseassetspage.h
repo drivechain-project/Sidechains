@@ -7,8 +7,9 @@
 
 #include <QWidget>
 
-class PlatformStyle;
+class AssetTableModel;
 class ClientModel;
+class PlatformStyle;
 
 namespace Ui {
 class BrowseAssetsPage;
@@ -31,8 +32,8 @@ private:
 
     const PlatformStyle *platformStyle;
 
-private Q_SLOTS:
-    void update();
+    AssetTableModel *tableModel = nullptr;
+
 };
 
 #endif // BROWSEASSETSPAGE_H

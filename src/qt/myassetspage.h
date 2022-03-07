@@ -10,6 +10,7 @@
 class PlatformStyle;
 class ClientModel;
 class WalletModel;
+class MyAssetsTableModel;
 
 namespace Ui {
 class MyAssetsPage;
@@ -26,9 +27,6 @@ public:
     void setWalletModel(WalletModel *model);
     void setClientModel(ClientModel *model);
 
-public Q_SLOTS:
-    void update();
-
 private:
     Ui::MyAssetsPage *ui;
 
@@ -36,6 +34,8 @@ private:
     ClientModel *clientModel = nullptr;
 
     const PlatformStyle *platformStyle;
+
+    MyAssetsTableModel *tableModel = nullptr;
 };
 
 #endif // MYASSETSPAGE_H
