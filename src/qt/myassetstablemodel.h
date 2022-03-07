@@ -21,12 +21,12 @@ struct MyAssetTableObject
     int64_t nAssetAmount;
     QString strHeadline;
     uint256 payload;
-    uint256 creationTxid;
-    uint256 outputTxid;
     int nOutputN;
     int nControlN;
     int nConfirmations;
     int64_t nAssetAmountIn;
+    uint256 creationTxid;
+    uint256 outputTxid;
 };
 
 class MyAssetsTableModel : public QAbstractTableModel

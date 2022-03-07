@@ -29,6 +29,8 @@ public:
 public Q_SLOTS:
     void on_pushButtonCreate_clicked();
     void on_pushButtonFile_clicked();
+    void on_checkBoxImmutable_toggled(bool fChecked);
+    void on_plainTextEditDetails_textChanged();
 
 private:
     Ui::CreateAssetPage *ui;

@@ -25,7 +25,7 @@ int AssetTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int AssetTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 5;
+    return 8;
 }
 
 QVariant AssetTableModel::data(const QModelIndex &index, int role) const
@@ -60,17 +60,29 @@ QVariant AssetTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return object.strTicker;
         }
-        // Headline
+        // Supply
         if (col == 2) {
+            return QString::number(object.nAssetSupply);
+        }
+        // Headline
+        if (col == 3) {
             return object.strHeadline;
         }
         // Payload hash
-        if (col == 3) {
+        if (col == 4) {
             return QString::fromStdString(object.payload.ToString());
         }
         // Creation txid
-        if (col == 4) {
+        if (col == 5) {
             return QString::fromStdString(object.creationTxid.ToString());
+        }
+        // Controller
+        if (col == 6) {
+            return object.strController;
+        }
+        // Owner
+        if (col == 7) {
+            return object.strOwner;
         }
 
         break;
@@ -85,16 +97,28 @@ QVariant AssetTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Headline
+        // Supply
         if (col == 2) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+            return int(Qt::AlignRight| Qt::AlignVCenter);
         }
-        // Payload hash
+        // Headline
         if (col == 3) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Creation txid
+        // Payload hash
         if (col == 4) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Creation txid
+        if (col == 5) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Controller
+        if (col == 6) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Owner
+        if (col == 7) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
@@ -108,15 +132,21 @@ QVariant AssetTableModel::headerData(int section, Qt::Orientation orientation, i
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("BitAsset ID #");
+                return QString("ID");
             case 1:
                 return QString("Ticker");
             case 2:
-                return QString("Headline");
+                return QString("Supply");
             case 3:
-                return QString("Payload hash");
+                return QString("Headline");
             case 4:
+                return QString("Payload hash");
+            case 5:
                 return QString("Creation txid");
+            case 6:
+                return QString("Controller");
+            case 7:
+                return QString("Owner");
             }
         }
     }
@@ -139,6 +169,9 @@ void AssetTableModel::Update()
         object.strHeadline = QString::fromStdString(asset.strHeadline);
         object.payload = asset.payload;;
         object.creationTxid = asset.txid;
+        object.nAssetSupply = asset.nSupply;
+        object.strController = QString::fromStdString(asset.strController);
+        object.strOwner = QString::fromStdString(asset.strOwner);
 
         model.append(QVariant::fromValue(object));
     }

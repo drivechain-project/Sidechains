@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>722</width>
-    <height>821</height>
+    <width>716</width>
+    <height>658</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,7 +22,16 @@
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QLineEdit" name="lineEditTicker"/>
+    <widget class="QLineEdit" name="lineEditTicker">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="placeholderText">
+      <string>Enter BitAsset trading ticker</string>
+     </property>
+    </widget>
    </item>
    <item row="3" column="0">
     <widget class="QLabel" name="label_2">
@@ -32,7 +41,16 @@
     </widget>
    </item>
    <item row="3" column="1">
-    <widget class="QLineEdit" name="lineEditHeader"/>
+    <widget class="QLineEdit" name="lineEditHeader">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="placeholderText">
+      <string>Enter a tagline to describe the BitAsset</string>
+     </property>
+    </widget>
    </item>
    <item row="5" column="0">
     <widget class="QLabel" name="label_3">
@@ -62,7 +80,16 @@
     </widget>
    </item>
    <item row="6" column="1">
-    <widget class="QLineEdit" name="lineEditOwner"/>
+    <widget class="QLineEdit" name="lineEditOwner">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="placeholderText">
+      <string>Enter an address to receive asset supply</string>
+     </property>
+    </widget>
    </item>
    <item row="7" column="0">
     <widget class="QLabel" name="label_8">
@@ -72,7 +99,7 @@
     </widget>
    </item>
    <item row="7" column="1">
-    <widget class="QCheckBox" name="checkBox">
+    <widget class="QCheckBox" name="checkBoxImmutable">
      <property name="text">
       <string/>
      </property>
@@ -86,43 +113,60 @@
     </widget>
    </item>
    <item row="8" column="1">
-    <widget class="QLineEdit" name="lineEditController"/>
-   </item>
-   <item row="9" column="0" colspan="2">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+    <widget class="QLineEdit" name="lineEditController">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="placeholderText">
+      <string>Enter an address to control asset updates</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
+   <item row="9" column="0">
     <widget class="QLabel" name="label_6">
      <property name="text">
       <string>Details:</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
-    <widget class="QPlainTextEdit" name="plainTextEditDetails"/>
+   <item row="9" column="1">
+    <widget class="QPlainTextEdit" name="plainTextEditDetails">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="placeholderText">
+      <string/>
+     </property>
+    </widget>
    </item>
-   <item row="11" column="0">
+   <item row="10" column="0">
     <widget class="QLabel" name="label_7">
      <property name="text">
       <string>Hash:</string>
      </property>
     </widget>
    </item>
-   <item row="11" column="1">
-    <widget class="QLineEdit" name="lineEditHash"/>
+   <item row="10" column="1">
+    <widget class="QLineEdit" name="lineEditHash">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+    </widget>
    </item>
-   <item row="12" column="0">
+   <item row="11" column="0">
     <widget class="QLabel" name="label_12">
      <property name="text">
       <string>Add File:</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="1">
+   <item row="11" column="1">
     <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -132,16 +176,9 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QLabel" name="label_10">
+       <widget class="QLabel" name="labelPath">
         <property name="text">
          <string>Path:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_11">
-        <property name="text">
-         <string>sha256:</string>
         </property>
        </widget>
       </item>
@@ -158,24 +195,17 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_9">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
-   <item row="13" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="15" column="1">
+   <item row="14" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="rightMargin">
       <number>0</number>
@@ -185,13 +215,26 @@
      </property>
      <item>
       <widget class="QLabel" name="label_13">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="text">
         <string>Tx Fee:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="AmountField" name="feeAmount"/>
+      <widget class="AmountField" name="feeAmount">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonCreate">
@@ -205,6 +248,22 @@
         <string>Create Asset</string>
        </property>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>100</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>

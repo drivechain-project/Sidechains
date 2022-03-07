@@ -71,29 +71,29 @@ QVariant MyAssetsTableModel::data(const QModelIndex &index, int role) const
         if (col == 4) {
             return QString::fromStdString(object.payload.ToString());
         }
-        // Creation txid
-        if (col == 5) {
-            return QString::fromStdString(object.creationTxid.ToString());
-        }
-        // Output txid
-        if (col == 6) {
-            return QString::fromStdString(object.outputTxid.ToString());
-        }
         // Output N
-        if (col == 7) {
+        if (col == 5) {
             return QString::number(object.nOutputN);
         }
         // Controller output N
-        if (col == 8) {
+        if (col == 6) {
             return QString::number(object.nControlN);
         }
         // Confirmations
-        if (col == 9) {
+        if (col == 7) {
             return QString::number(object.nConfirmations);
         }
         // Amount asset input
-        if (col == 10) {
+        if (col == 8) {
             return QString::number(object.nAssetAmountIn);
+        }
+        // Creation txid
+        if (col == 9) {
+            return QString::fromStdString(object.creationTxid.ToString());
+        }
+        // Output txid
+        if (col == 10) {
+            return QString::fromStdString(object.outputTxid.ToString());
         }
 
         break;
@@ -120,29 +120,29 @@ QVariant MyAssetsTableModel::data(const QModelIndex &index, int role) const
         if (col == 4) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Creation txid
-        if (col == 5) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
-        // Output txid
-        if (col == 6) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
         // Output N
-        if (col == 7) {
+        if (col == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Controller output N
-        if (col == 8) {
+        if (col == 6) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Confirmations
-        if (col == 9) {
+        if (col == 7) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Amount asset input
-        if (col == 10) {
+        if (col == 8) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Creation txid
+        if (col == 9) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Output txid
+        if (col == 10) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }
@@ -155,27 +155,27 @@ QVariant MyAssetsTableModel::headerData(int section, Qt::Orientation orientation
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("BitAsset ID #");
+                return QString("ID");
             case 1:
                 return QString("Ticker");
             case 2:
-                return QString("Asset balance");
+                return QString("Balance");
             case 3:
                 return QString("Headline");
             case 4:
                 return QString("Payload hash");
             case 5:
-                return QString("Creation txid");
-            case 6:
-                return QString("Output txid");
-            case 7:
                 return QString("Output N");
-            case 8:
+            case 6:
                 return QString("Controller output N");
-            case 9:
+            case 7:
                 return QString("Confirmations");
-            case 10:
+            case 8:
                 return QString("Amount asset input");
+            case 9:
+                return QString("Creation txid");
+            case 10:
+                return QString("Output txid");
             }
         }
     }

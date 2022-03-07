@@ -18,11 +18,12 @@ struct AssetTableObject
 {
     uint32_t nID;
     QString strTicker;
-// TODO   int64_t nAssetSupply;
+    int64_t nAssetSupply;
     QString strHeadline;
     uint256 payload;
     uint256 creationTxid;
-
+    QString strController;
+    QString strOwner;
 };
 
 class AssetTableModel : public QAbstractTableModel
