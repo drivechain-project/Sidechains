@@ -2313,6 +2313,11 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         // New asset created - set asset ID # and update BitAssetDB
         uint32_t nNewAssetID = 0;
         if (tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION) {
+            if (tx.vout.size() < 2) {
+                return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - vout too small"),
+                                 REJECT_INVALID, "bad-asset-vout-small");
+            }
+
             uint32_t nIDLast = 0;
             passettree->GetLastAssetID(nIDLast);
 
@@ -2322,6 +2327,21 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             asset.strHeadline = tx.headline;
             asset.payload = tx.payload;
             asset.txid = tx.GetHash();
+            asset.nSupply = tx.vout[1].nValue;
+
+            CTxDestination controllerDest;
+            if (!ExtractDestination(tx.vout[0].scriptPubKey, controllerDest)) {
+                    return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - controller destination invalid"),
+                                     REJECT_INVALID, "bad-asset-controller-dest");
+            }
+            CTxDestination ownerDest;
+            if (!ExtractDestination(tx.vout[1].scriptPubKey, ownerDest)) {
+                    return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - owner destination invalid"),
+                                     REJECT_INVALID, "bad-asset-owner-dest");
+            }
+
+            asset.strController = EncodeDestination(controllerDest);
+            asset.strOwner = EncodeDestination(ownerDest);
 
             vAsset.push_back(asset);
 

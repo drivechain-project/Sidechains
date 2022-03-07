@@ -804,9 +804,12 @@ UniValue listassets(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.pushKV("id", (uint64_t)b.nID);
         obj.pushKV("ticker", b.strTicker);
+        obj.pushKV("supply", b.nSupply);
         obj.pushKV("headline", b.strHeadline);
         obj.pushKV("payload", b.payload.ToString());
         obj.pushKV("txid", b.txid.ToString());
+        obj.pushKV("controller", b.strController);
+        obj.pushKV("owner", b.strOwner);
         result.push_back(obj);
     }
 

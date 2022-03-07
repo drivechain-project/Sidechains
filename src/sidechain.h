@@ -134,6 +134,9 @@ struct BitAsset : public BitAssetObj {
     std::string strHeadline;
     uint256 payload;
     uint256 txid;
+    int64_t nSupply;
+    std::string strController;
+    std::string strOwner;
 
     ADD_SERIALIZE_METHODS
 
@@ -144,6 +147,9 @@ struct BitAsset : public BitAssetObj {
         READWRITE(strHeadline);
         READWRITE(payload);
         READWRITE(txid);
+        READWRITE(nSupply);
+        READWRITE(strController);
+        READWRITE(strOwner);
     }
 };
 
