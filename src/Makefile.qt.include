@@ -310,6 +310,7 @@ RES_ICONS = \
   qt/res/icons/connect2.png \
   qt/res/icons/connect3.png \
   qt/res/icons/connect4.png \
+  qt/res/icons/create.png \
   qt/res/icons/debugwindow.png \
   qt/res/icons/drivenet.png \
   qt/res/icons/edit.png \
@@ -350,6 +351,8 @@ RES_ICONS = \
   qt/res/icons/tx_output.png \
   qt/res/icons/tx_mined.png \
   qt/res/icons/warning.png \
+  qt/res/icons/world.png \
+  qt/res/icons/vault.png \
   qt/res/icons/verify.png
 
 BITCOIN_QT_BASE_CPP = \

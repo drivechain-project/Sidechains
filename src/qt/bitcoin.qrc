@@ -60,6 +60,9 @@
         <file alias="calculator">res/icons/calculator.png</file>
         <file alias="search">res/icons/search.png</file>
         <file alias="flip">res/icons/flip.png</file>
+        <file alias="vault">res/icons/vault.png</file>
+        <file alias="world">res/icons/world.png</file>
+        <file alias="create">res/icons/create.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="spinner-000">res/movies/spinner-000.png</file>

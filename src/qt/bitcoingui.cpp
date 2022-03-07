@@ -333,21 +333,21 @@ void BitcoinGUI::createActions()
     historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(historyAction);
 
-    myAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&My Assets"), this);
+    myAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/vault"), tr("&My Assets"), this);
     myAssetsAction->setStatusTip(tr("Show BitAssets in the wallet"));
     myAssetsAction->setToolTip(myAssetsAction->statusTip());
     myAssetsAction->setCheckable(true);
     myAssetsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
     tabGroup->addAction(myAssetsAction);
 
-    browseAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Browse Assets"), this);
+    browseAssetsAction = new QAction(platformStyle->SingleColorIcon(":/icons/world"), tr("&Browse Assets"), this);
     browseAssetsAction->setStatusTip(tr("Browse all BitAssets"));
     browseAssetsAction->setToolTip(browseAssetsAction->statusTip());
     browseAssetsAction->setCheckable(true);
     browseAssetsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
     tabGroup->addAction(browseAssetsAction);
 
-    createAssetAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Create Asset"), this);
+    createAssetAction = new QAction(platformStyle->SingleColorIcon(":/icons/create"), tr("&Create Asset"), this);
     createAssetAction->setStatusTip(tr("Create a new BitAsset"));
     createAssetAction->setToolTip(createAssetAction->statusTip());
     createAssetAction->setCheckable(true);
@@ -531,6 +531,7 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
+        toolbar->addSeparator();
         toolbar->addAction(myAssetsAction);
         toolbar->addAction(browseAssetsAction);
         toolbar->addAction(createAssetAction);
