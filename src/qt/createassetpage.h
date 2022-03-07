@@ -27,7 +27,8 @@ public:
     void setClientModel(ClientModel *model);
 
 public Q_SLOTS:
-    void update();
+    void on_pushButtonCreate_clicked();
+    void on_pushButtonFile_clicked();
 
 private:
     Ui::CreateAssetPage *ui;
@@ -36,6 +37,8 @@ private:
     ClientModel *clientModel = nullptr;
 
     const PlatformStyle *platformStyle;
+
+    bool validateFeeAmount();
 };
 
 #endif // CREATEASSETPAGE_H

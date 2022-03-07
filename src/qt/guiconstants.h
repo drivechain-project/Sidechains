@@ -48,7 +48,7 @@ static const int MAX_URI_LENGTH = 255;
 
 #define QAPP_ORG_NAME "bitassetsd"
 #define QAPP_ORG_DOMAIN "drivechain.info"
-#define QAPP_APP_NAME_DEFAULT "Sidechain-Qt"
-#define QAPP_APP_NAME_TESTNET "Sidechain-Qt-testnet"
+#define QAPP_APP_NAME_DEFAULT "BitAssets-Qt"
+#define QAPP_APP_NAME_TESTNET "BitAssets-Qt-testnet"
 
 #endif // BITCOIN_QT_GUICONSTANTS_H

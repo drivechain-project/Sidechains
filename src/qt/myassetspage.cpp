@@ -24,33 +24,33 @@ MyAssetsPage::MyAssetsPage(const PlatformStyle *_platformStyle, QWidget *parent)
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
-    ui->tableViewAssets->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewMyAssets->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
-    ui->tableViewAssets->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewMyAssets->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 #endif
 
     // Don't stretch last cell of horizontal header
-    ui->tableViewAssets->horizontalHeader()->setStretchLastSection(false);
+    ui->tableViewMyAssets->horizontalHeader()->setStretchLastSection(false);
 
     // Hide vertical header
-    ui->tableViewAssets->verticalHeader()->setVisible(false);
+    ui->tableViewMyAssets->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
-    ui->tableViewAssets->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewMyAssets->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
-    ui->tableViewAssets->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    ui->tableViewAssets->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewMyAssets->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewMyAssets->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Disable word wrap
-    ui->tableViewAssets->setWordWrap(false);
+    ui->tableViewMyAssets->setWordWrap(false);
 
     // Select rows
-    ui->tableViewAssets->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewMyAssets->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     tableModel = new MyAssetsTableModel(this);
-    ui->tableViewAssets->setModel(tableModel);
+    ui->tableViewMyAssets->setModel(tableModel);
 }
 
 MyAssetsPage::~MyAssetsPage()
@@ -66,9 +66,6 @@ void MyAssetsPage::setWalletModel(WalletModel *model)
 
 void MyAssetsPage::setClientModel(ClientModel *model)
 {
-    this->clientModel = model;
-    if (model)
-    {
-        tableModel->setClientModel(model);
-    }
+    clientModel = model;
+    tableModel->setClientModel(model);
 }

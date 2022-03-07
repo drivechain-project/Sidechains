@@ -33,7 +33,6 @@ private:
     const PlatformStyle *platformStyle;
 
     AssetTableModel *tableModel = nullptr;
-
 };
 
 #endif // BROWSEASSETSPAGE_H
