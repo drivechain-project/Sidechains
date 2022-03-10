@@ -122,6 +122,12 @@ QVariant AssetTableModel::data(const QModelIndex &index, int role) const
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
+    case Qt::EditRole:
+    {
+        if (col == 0)
+            return object.nID;
+        break;
+    }
     }
     return QVariant();
 }

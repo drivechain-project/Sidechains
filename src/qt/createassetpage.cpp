@@ -86,10 +86,12 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
         return;
     }
 
+    bool fImmutable = ui->checkBoxImmutable->isChecked();
+
     // Check controller destination
     std::string strController = ui->lineEditController->text().toStdString();
     CTxDestination destController = DecodeDestination(strController);
-    if (!IsValidDestination(destController)) {
+    if (!fImmutable && !IsValidDestination(destController)) {
         // Invalid address message box
         messageBox.setWindowTitle("Invalid controller destination!");
         messageBox.setText("Check the address you have entered and try again.");
@@ -118,7 +120,6 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
 
     CAmount feeAmount = ui->feeAmount->value();
 
-
     CTransactionRef tx;
     std::string strFail = "";
     std::string ticker = ui->lineEditTicker->text().toStdString();
@@ -130,8 +131,8 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
         LOCK(vpwallets[0]->cs_wallet);
         if (!vpwallets[0]->CreateAsset(tx, strFail, ticker, headline, payload, feeAmount, nSupply, strController, strOwner))
         {
-            messageBox.setWindowTitle("Missing payload hash!");
-            messageBox.setText("Please enter a payload hash and try again.");
+            messageBox.setWindowTitle("Failed to create asset!");
+            messageBox.setText("Error: " + QString::fromStdString(strFail));
             messageBox.exec();
             return;
         }

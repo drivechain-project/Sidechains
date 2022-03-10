@@ -16,6 +16,10 @@ namespace Ui {
 class MyAssetsPage;
 }
 
+QT_BEGIN_NAMESPACE
+class QSortFilterProxyModel;
+QT_END_NAMESPACE
+
 class MyAssetsPage : public QWidget
 {
     Q_OBJECT
@@ -36,6 +40,7 @@ private:
     const PlatformStyle *platformStyle;
 
     MyAssetsTableModel *tableModel = nullptr;
+    QSortFilterProxyModel *proxyModel = nullptr;
 };
 
 #endif // MYASSETSPAGE_H

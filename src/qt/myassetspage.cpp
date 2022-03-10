@@ -10,6 +10,7 @@
 #include <qt/walletmodel.h>
 
 #include <QScrollBar>
+#include <QSortFilterProxyModel>
 
 #include <wallet/wallet.h>
 
@@ -50,7 +51,15 @@ MyAssetsPage::MyAssetsPage(const PlatformStyle *_platformStyle, QWidget *parent)
     ui->tableViewMyAssets->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     tableModel = new MyAssetsTableModel(this);
-    ui->tableViewMyAssets->setModel(tableModel);
+
+    proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(tableModel);
+    proxyModel->setSortRole(Qt::EditRole);
+
+    ui->tableViewMyAssets->setModel(proxyModel);
+
+    ui->tableViewMyAssets->setSortingEnabled(true);
+    ui->tableViewMyAssets->sortByColumn(0, Qt::DescendingOrder);
 }
 
 MyAssetsPage::~MyAssetsPage()

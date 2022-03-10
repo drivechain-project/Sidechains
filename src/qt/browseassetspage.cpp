@@ -9,6 +9,7 @@
 #include <qt/assettablemodel.h>
 
 #include <QScrollBar>
+#include <QSortFilterProxyModel>
 
 BrowseAssetsPage::BrowseAssetsPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
@@ -46,7 +47,15 @@ BrowseAssetsPage::BrowseAssetsPage(const PlatformStyle *_platformStyle, QWidget 
     ui->tableViewAssets->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     tableModel = new AssetTableModel(this);
-    ui->tableViewAssets->setModel(tableModel);
+
+    proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(tableModel);
+    proxyModel->setSortRole(Qt::EditRole);
+
+    ui->tableViewAssets->setModel(proxyModel);
+
+    ui->tableViewAssets->setSortingEnabled(true);
+    ui->tableViewAssets->sortByColumn(0, Qt::DescendingOrder);
 }
 
 BrowseAssetsPage::~BrowseAssetsPage()

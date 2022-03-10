@@ -144,6 +144,14 @@ QVariant MyAssetsTableModel::data(const QModelIndex &index, int role) const
         if (col == 10) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
+
+        break;
+    }
+    case Qt::EditRole:
+    {
+        if (col == 0)
+            return object.nID;
+        break;
     }
     }
     return QVariant();

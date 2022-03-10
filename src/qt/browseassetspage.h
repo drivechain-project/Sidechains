@@ -15,6 +15,10 @@ namespace Ui {
 class BrowseAssetsPage;
 }
 
+QT_BEGIN_NAMESPACE
+class QSortFilterProxyModel;
+QT_END_NAMESPACE
+
 class BrowseAssetsPage : public QWidget
 {
     Q_OBJECT
@@ -33,6 +37,7 @@ private:
     const PlatformStyle *platformStyle;
 
     AssetTableModel *tableModel = nullptr;
+    QSortFilterProxyModel *proxyModel = nullptr;
 };
 
 #endif // BROWSEASSETSPAGE_H
