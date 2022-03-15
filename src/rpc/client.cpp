@@ -141,7 +141,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "echojson", 9, "arg9" },
     { "rescanblockchain", 0, "start_height"},
     { "rescanblockchain", 1, "stop_height"},
-    // DriveChain
+    // Drivechain
     { "createwithdrawal", 2, "namount"},
     { "createwithdrawal", 3, "nfee"},
     { "createwithdrawal", 4, "nmainchainfee"},
