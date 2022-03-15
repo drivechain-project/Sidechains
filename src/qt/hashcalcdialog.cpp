@@ -68,7 +68,7 @@ void HashCalcDialog::on_pushButtonPaste_clicked()
 
 void HashCalcDialog::on_pushButtonHelp_clicked()
 {
-    QMessageBox::information(this, tr("DriveNet - information"),
+    QMessageBox::information(this, tr("DriveChain - information"),
         tr(""
            "Hex:\n"
            "The hexadecimal (base 16) representation.\n\n"
@@ -88,7 +88,7 @@ void HashCalcDialog::on_pushButtonHelp_clicked()
 
 void HashCalcDialog::on_pushButtonHelpInvalidHex_clicked()
 {
-    QMessageBox::information(this, tr("DriveNet - information"),
+    QMessageBox::information(this, tr("DriveChain - information"),
         tr("Please enter valid Hex without spaces or 0x."),
         QMessageBox::Ok);
 }
