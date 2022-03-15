@@ -835,7 +835,7 @@ void BitcoinGUI::updateNetworkState()
 
     bool fNetworking = clientModel->getNetworkActive();
     if (fNetworking) {
-        tooltip = tr("%n active connection(s) to DriveNet network", "", count) + QString(".<br>");
+        tooltip = tr("%n active connection(s) to DriveChain network", "", count) + QString(".<br>");
     } else {
         tooltip = tr("Network activity disabled.") + QString("<br>") + tr("Click to enable network activity again.");
     }
