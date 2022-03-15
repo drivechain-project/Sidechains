@@ -58,7 +58,7 @@ void ConfGeneratorDialog::on_pushButtonApply_clicked()
         messageBox.setIcon(QMessageBox::Information);
         messageBox.setWindowTitle("Configuration files created!");
         QString str = "Configuration files created!\n\n";
-        str += "You must restart DriveNet and any\n";
+        str += "You must restart DriveChain and any\n";
         str += "sidechains for changes to be applied.";
         messageBox.setText(str);
         messageBox.exec();
@@ -102,20 +102,20 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     std::string strData = "";
 #ifdef WIN32
-    strData = "DriveNet";
+    strData = "DriveChain";
 #else
 
 #ifdef MAC_OSX
-    strData = "DriveNet";
+    strData = "DriveChain";
 #else
-    strData = ".drivenet";
+    strData = ".drivechain";
 #endif
 #endif
 
-    // Does the drivenet directory exist?
+    // Does the drivechain directory exist?
     fs::path pathData = pathHome / strData;
     if (!fs::exists(pathData)) {
-        QString strError = "DriveNet data directory (~/.drivenet) not found!\n";
+        QString strError = "DriveChain data directory (~/.drivechain) not found!\n";
         messageBox.setText(strError);
         messageBox.exec();
         return false;
@@ -127,7 +127,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     // doesn't have RPC configured we will generate a new mainchain config file.
 
     // Do we need to backup the old config file?
-    fs::path pathConf = pathData / "drivenet.conf";
+    fs::path pathConf = pathData / "drivechain.conf";
     bool fExists = fs::exists(pathConf);
 
     // Check for existing RPC configuration

@@ -298,7 +298,7 @@ RES_ICONS = \
   qt/res/icons/connect3.png \
   qt/res/icons/connect4.png \
   qt/res/icons/debugwindow.png \
-  qt/res/icons/drivenet.png \
+  qt/res/icons/drivechain.png \
   qt/res/icons/edit.png \
   qt/res/icons/editcopy.png \
   qt/res/icons/editpaste.png \

@@ -951,21 +951,21 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     fConnection = false;
 
     fs::path pathHome = GetHomeDir();
-    std::string strDrivenetData = "";
+    std::string strDriveChainData = "";
 
 #ifdef WIN32
-    strDrivenetData = "DriveNet";
+    strDriveChainData = "DriveChain";
 #else
 #ifdef MAC_OSX
-    strDrivenetData = "DriveNet";
+    strDriveChainData = "DriveChain";
 #else
-    strDrivenetData = ".drivenet";
+    strDriveChainData = ".drivechain";
 #endif
 #endif
 
-    // Does the drivenet directory exist?
-    fs::path pathDrivenetData = pathHome / strDrivenetData;
-    if (!fs::exists(pathDrivenetData))
+    // Does the drivechain directory exist?
+    fs::path pathDriveChainData = pathHome / strDriveChainData;
+    if (!fs::exists(pathDriveChainData))
         LogPrintf("%s: Configuration error - drivechain data directory not found!\n");
 
     // Does the sidechain directory exist?
@@ -975,10 +975,10 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     }
 
     // Do we have configuration files for the mainchain & sidechain?
-    fs::path pathConfMain = pathDrivenetData / "drivenet.conf";
+    fs::path pathConfMain = pathDriveChainData / "drivechain.conf";
     fs::path pathConfSide = pathSide / "trainchain.conf";
 
-    // Do drivenet.conf & side.conf exist?
+    // Do drivechain.conf & side.conf exist?
     if (fs::exists(pathConfMain) && fs::exists(pathConfSide))
         fConfig = true;
 
