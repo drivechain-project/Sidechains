@@ -58,7 +58,7 @@ void ConfGeneratorDialog::on_pushButtonApply_clicked()
         messageBox.setIcon(QMessageBox::Information);
         messageBox.setWindowTitle("Configuration files created!");
         QString str = "Configuration files created!\n\n";
-        str += "You must restart DriveChain and any\n";
+        str += "You must restart Drivechain and any\n";
         str += "sidechains for changes to be applied.";
         messageBox.setText(str);
         messageBox.exec();
@@ -102,11 +102,11 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     std::string strData = "";
 #ifdef WIN32
-    strData = "DriveChain";
+    strData = "Drivechain";
 #else
 
 #ifdef MAC_OSX
-    strData = "DriveChain";
+    strData = "Drivechain";
 #else
     strData = ".drivechain";
 #endif
@@ -115,7 +115,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     // Does the drivechain directory exist?
     fs::path pathData = pathHome / strData;
     if (!fs::exists(pathData)) {
-        QString strError = "DriveChain data directory (~/.drivechain) not found!\n";
+        QString strError = "Drivechain data directory (~/.drivechain) not found!\n";
         messageBox.setText(strError);
         messageBox.exec();
         return false;

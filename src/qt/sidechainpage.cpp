@@ -951,21 +951,21 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     fConnection = false;
 
     fs::path pathHome = GetHomeDir();
-    std::string strDriveChainData = "";
+    std::string strDrivechainData = "";
 
 #ifdef WIN32
-    strDriveChainData = "DriveChain";
+    strDrivechainData = "Drivechain";
 #else
 #ifdef MAC_OSX
-    strDriveChainData = "DriveChain";
+    strDrivechainData = "Drivechain";
 #else
-    strDriveChainData = ".drivechain";
+    strDrivechainData = ".drivechain";
 #endif
 #endif
 
     // Does the drivechain directory exist?
-    fs::path pathDriveChainData = pathHome / strDriveChainData;
-    if (!fs::exists(pathDriveChainData))
+    fs::path pathDrivechainData = pathHome / strDrivechainData;
+    if (!fs::exists(pathDrivechainData))
         LogPrintf("%s: Configuration error - drivechain data directory not found!\n");
 
     // Does the sidechain directory exist?
@@ -975,7 +975,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     }
 
     // Do we have configuration files for the mainchain & sidechain?
-    fs::path pathConfMain = pathDriveChainData / "drivechain.conf";
+    fs::path pathConfMain = pathDrivechainData / "drivechain.conf";
     fs::path pathConfSide = pathSide / "thunder.conf";
 
     // Do drivechain.conf & side.conf exist?
