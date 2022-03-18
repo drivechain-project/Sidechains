@@ -99,7 +99,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x987b888c6f2029e21cfc07e5aed71ec8d1f285142ecfde27260450f375f76fa3");
+        consensus.defaultAssumeValid = uint256S("0xec439e01bd0aee938b1794c5ea46560503103127071d01da6f9fbc837dfce2a4");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -113,10 +113,10 @@ public:
         nDefaultPort = 2564;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1634946042, 9, 0);
+        genesis = CreateGenesisBlock(1647560906, 9, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x987b888c6f2029e21cfc07e5aed71ec8d1f285142ecfde27260450f375f76fa3"));
+        assert(consensus.hashGenesisBlock == uint256S("0xec439e01bd0aee938b1794c5ea46560503103127071d01da6f9fbc837dfce2a4"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vSeeds.clear();
@@ -131,7 +131,6 @@ public:
 
         bech32_hrp = "sc";
 
-        // TODO more seed nodes
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
         fDefaultConsistencyChecks = false;
@@ -140,7 +139,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0x987b888c6f2029e21cfc07e5aed71ec8d1f285142ecfde27260450f375f76fa3")},
+                { 0, uint256S("0xec439e01bd0aee938b1794c5ea46560503103127071d01da6f9fbc837dfce2a4")},
             }
         };
 
