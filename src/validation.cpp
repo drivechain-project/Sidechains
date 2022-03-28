@@ -268,8 +268,6 @@ private:
     bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params);
 } g_chainstate;
 
-
-
 CCriticalSection cs_main;
 
 BMMCache bmmCache;
@@ -1417,8 +1415,8 @@ void CChainState::InvalidBlockFound(CBlockIndex *pindex, const CValidationState 
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txundo, int nHeight, CAmount& amountAssetInOut, int& nControlNOut, uint32_t& nAssetIDOut, uint32_t nNewAssetIDIn)
 {
     amountAssetInOut = CAmount(0); // Track asset inputs
-    nControlNOut = -1;
-    nAssetIDOut = 0;
+    nControlNOut = -1; // Track asset controller outputs
+    nAssetIDOut = 0; // Track asset ID
     if (!tx.IsCoinBase()) {
         txundo.vprevout.reserve(tx.vin.size());
         // mark inputs spent
@@ -1426,7 +1424,13 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
             txundo.vprevout.emplace_back();
             bool fBitAsset = false;
             bool fBitAssetControl = false;
-            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, nAssetIDOut, &txundo.vprevout.back());
+            uint32_t nAssetID = 0;
+            bool is_spent = inputs.SpendCoin(tx.vin[x].prevout, fBitAsset, fBitAssetControl, nAssetID, &txundo.vprevout.back());
+
+            // Update nAssetIDOut if SpendCoin returns a non-zero asset ID
+            if (nAssetID)
+                nAssetIDOut = nAssetID;
+
             assert(is_spent);
 
             if (fBitAsset)
