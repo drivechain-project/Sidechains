@@ -49,6 +49,26 @@ QVariant MyAssetsTableModel::data(const QModelIndex &index, int role) const
     MyAssetTableObject object = model.at(row).value<MyAssetTableObject>();
 
     switch (role) {
+    case IDRole:
+    {
+        return object.nID;
+    }
+    case TickerRole:
+    {
+        return object.strTicker;
+    }
+    case AmountRole:
+    {
+        return QString::number(object.nAssetAmount);
+    }
+    case HeadlineRole:
+    {
+        return object.strHeadline;
+    }
+    case TxIDRole:
+    {
+        return QString::fromStdString(object.outputTxid.ToString());
+    }
     case Qt::DisplayRole:
     {
         // BitAsset ID #

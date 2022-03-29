@@ -44,6 +44,14 @@ public:
     void setWalletModel(WalletModel *model);
     void setClientModel(ClientModel *model);
 
+    enum RoleIndex {
+        IDRole = Qt::UserRole,
+        TickerRole,
+        AmountRole,
+        HeadlineRole,
+        TxIDRole,
+    };
+
 public Q_SLOTS:
     void Update();
 
