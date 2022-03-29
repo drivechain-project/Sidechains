@@ -110,7 +110,6 @@ void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint3
         // 1: genesis output
         // The rest are normal outputs
         bool fBAC = tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION;
-
         for (size_t i = 0; i < tx.vout.size(); ++i) {
             bool overwrite = check ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
             cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fBAC && i < 2 ? true : false, fBAC && i == 0, nNewAssetID ? nNewAssetID : nAssetID), overwrite);

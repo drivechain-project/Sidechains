@@ -1290,8 +1290,6 @@ void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock>& pblock) {
     }
 }
 
-
-
 void CWallet::BlockUntilSyncedToCurrentChain() {
     AssertLockNotHeld(cs_main);
     AssertLockNotHeld(cs_wallet);
@@ -2313,7 +2311,6 @@ void CWallet::AvailableAssets(std::vector<COutput> &vCoins, uint256 txid) const
         if (wtx->amountAssetIn <= 0 && wtx->tx->nVersion != TRANSACTION_BITASSET_CREATE_VERSION)
             continue;
 
-
         if (!CheckFinalTx(*wtx->tx))
             continue;
 
@@ -3300,6 +3297,12 @@ bool CWallet::TransferAsset(std::string& strFail, uint256& txidOut, const uint25
     std::vector<COutput> vOut;
     AvailableAssets(vOut, txid);
 
+    if (vOut.empty()) {
+        strFail = "No BitAssets of this type in available!";
+        return false;
+    }
+    uint32_t nAssetID = vOut[0].tx->nAssetID;
+
     CAmount nAmountAsset = CAmount(0);
     for (const COutput& out : vOut)
         nAmountAsset += out.tx->tx->vout[out.i].nValue;
@@ -3447,6 +3450,7 @@ bool CWallet::TransferAsset(std::string& strFail, uint256& txidOut, const uint25
     walletTx.BindWallet(this);
 
     walletTx.amountAssetIn = nAmountAsset;
+    walletTx.nAssetID = nAssetID;
 
     walletTx.SetTx(MakeTransactionRef(std::move(mtx)));
     CValidationState state;
