@@ -5,13 +5,16 @@
 #include <qt/myassetspage.h>
 #include <qt/forms/ui_myassetspage.h>
 
+#include <qt/assettransferdialog.h>
 #include <qt/clientmodel.h>
 #include <qt/myassetstablemodel.h>
 #include <qt/walletmodel.h>
 
+#include <QMenu>
 #include <QScrollBar>
 #include <QSortFilterProxyModel>
 
+#include <uint256.h>
 #include <wallet/wallet.h>
 
 MyAssetsPage::MyAssetsPage(const PlatformStyle *_platformStyle, QWidget *parent) :
@@ -60,6 +63,17 @@ MyAssetsPage::MyAssetsPage(const PlatformStyle *_platformStyle, QWidget *parent)
 
     ui->tableViewMyAssets->setSortingEnabled(true);
     ui->tableViewMyAssets->sortByColumn(0, Qt::DescendingOrder);
+
+    ui->tableViewMyAssets->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    QAction *showTransferDialog = new QAction(tr("Transfer BitAsset"), this);
+
+    contextMenu = new QMenu(this);
+    contextMenu->setObjectName("contextMenu");
+    contextMenu->addAction(showTransferDialog);
+
+    connect(ui->tableViewMyAssets, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
+    connect(showTransferDialog, SIGNAL(triggered()), this, SLOT(showTransferDialog()));
 }
 
 MyAssetsPage::~MyAssetsPage()
@@ -77,4 +91,37 @@ void MyAssetsPage::setClientModel(ClientModel *model)
 {
     clientModel = model;
     tableModel->setClientModel(model);
+}
+
+void MyAssetsPage::on_tableViewMyAssets_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    uint32_t nID = index.data(MyAssetsTableModel::IDRole).toUInt();
+    uint256 txid = uint256S(index.data(MyAssetsTableModel::TxIDRole).toString().toStdString());
+    int64_t nAssetAmount = index.data(MyAssetsTableModel::AmountRole).toInt();
+    QString strTicker = index.data(MyAssetsTableModel::TickerRole).toString();
+    QString strHeadline = index.data(MyAssetsTableModel::HeadlineRole).toString();
+
+    AssetTransferDialog dialog;
+    dialog.SetAsset(nID, txid, nAssetAmount, strTicker, strHeadline);
+    dialog.exec();
+}
+
+void MyAssetsPage::contextualMenu(const QPoint& point)
+{
+    QModelIndex index = ui->tableViewMyAssets->indexAt(point);
+    if (index.isValid())
+        contextMenu->popup(ui->tableViewMyAssets->viewport()->mapToGlobal(point));
+}
+
+void MyAssetsPage::showTransferDialog()
+{
+    if (!ui->tableViewMyAssets->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewMyAssets->selectionModel()->selectedRows();
+    if (!selection.isEmpty())
+        on_tableViewMyAssets_doubleClicked(selection.front());
 }

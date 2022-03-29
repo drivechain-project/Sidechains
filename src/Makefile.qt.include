@@ -98,6 +98,7 @@ QT_FORMS_UI = \
   qt/forms/addressbookpage.ui \
   qt/forms/askpassphrasedialog.ui \
   qt/forms/amountfield.ui \
+  qt/forms/assettransferdialog.ui \
   qt/forms/blockexplorer.ui \
   qt/forms/blockindexdetailsdialog.ui \
   qt/forms/browseassetspage.ui \
@@ -133,6 +134,7 @@ QT_MOC_CPP = \
   qt/moc_amountfield.cpp \
   qt/moc_askpassphrasedialog.cpp \
   qt/moc_assettablemodel.cpp \
+  qt/moc_assettransferdialog.cpp \
   qt/moc_bantablemodel.cpp \
   qt/moc_blockexplorer.cpp \
   qt/moc_blockexplorertablemodel.cpp \
@@ -220,6 +222,7 @@ BITCOIN_QT_H = \
   qt/amountfield.h \
   qt/askpassphrasedialog.h \
   qt/assettablemodel.h \
+  qt/assettransferdialog.h \
   qt/bantablemodel.h \
   qt/blockexplorer.h \
   qt/blockexplorertablemodel.h \
@@ -387,6 +390,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/addresstablemodel.cpp \
   qt/askpassphrasedialog.cpp \
   qt/assettablemodel.cpp \
+  qt/assettransferdialog.cpp \
   qt/blockexplorer.cpp \
   qt/blockexplorertablemodel.cpp \
   qt/blockindexdetailsdialog.cpp \

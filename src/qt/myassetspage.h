@@ -17,6 +17,8 @@ class MyAssetsPage;
 }
 
 QT_BEGIN_NAMESPACE
+class QMenu;
+class QModelIndex;
 class QSortFilterProxyModel;
 QT_END_NAMESPACE
 
@@ -31,6 +33,11 @@ public:
     void setWalletModel(WalletModel *model);
     void setClientModel(ClientModel *model);
 
+private Q_SLOTS:
+    void on_tableViewMyAssets_doubleClicked(const QModelIndex& index);
+    void contextualMenu(const QPoint &);
+    void showTransferDialog();
+
 private:
     Ui::MyAssetsPage *ui;
 
@@ -41,6 +48,9 @@ private:
 
     MyAssetsTableModel *tableModel = nullptr;
     QSortFilterProxyModel *proxyModel = nullptr;
+
+    QMenu *contextMenu = nullptr;
+
 };
 
 #endif // MYASSETSPAGE_H
