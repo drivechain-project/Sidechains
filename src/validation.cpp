@@ -2334,17 +2334,23 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             asset.nSupply = tx.vout[1].nValue;
 
             CTxDestination controllerDest;
-            if (!ExtractDestination(tx.vout[0].scriptPubKey, controllerDest)) {
-                    return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - controller destination invalid"),
-                                     REJECT_INVALID, "bad-asset-controller-dest");
+            if (ExtractDestination(tx.vout[0].scriptPubKey, controllerDest)) {
+                asset.strController = EncodeDestination(controllerDest);
             }
+            else
+            if (tx.vout[0].scriptPubKey.size() && tx.vout[0].scriptPubKey[0] == OP_RETURN) {
+                asset.strController = "OP_RETURN";
+            }
+            else {
+                return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - controller destination invalid"),
+                                 REJECT_INVALID, "bad-asset-controller-dest");
+            }
+
             CTxDestination ownerDest;
             if (!ExtractDestination(tx.vout[1].scriptPubKey, ownerDest)) {
                     return state.DoS(100, error("ConnectBlock(): Invalid BitAsset creation - owner destination invalid"),
                                      REJECT_INVALID, "bad-asset-owner-dest");
             }
-
-            asset.strController = EncodeDestination(controllerDest);
             asset.strOwner = EncodeDestination(ownerDest);
 
             vAsset.push_back(asset);

@@ -3126,7 +3126,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     return true;
 }
 
-bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::string& strTicker, const std::string& strHeadline, const uint256& hashPayload, const CAmount& nFee, const int64_t nSupply, const std::string& strControllerDest, const std::string& strGenesisDest)
+bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::string& strTicker, const std::string& strHeadline, const uint256& hashPayload, const CAmount& nFee, const int64_t nSupply, const std::string& strControllerDest, const std::string& strGenesisDest, bool fImmutable)
 {
     strFail = "Unknown error!";
 
@@ -3136,7 +3136,7 @@ bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::
     }
 
     CTxDestination destControl = DecodeDestination(strControllerDest);
-    if (!IsValidDestination(destControl)) {
+    if (!fImmutable && !IsValidDestination(destControl)) {
         strFail = "Invalid controller destination";
         return false;
     }
@@ -3150,15 +3150,17 @@ bool CWallet::CreateAsset(CTransactionRef& tx, std::string& strFail, const std::
     CMutableTransaction mtx;
     mtx.nVersion = TRANSACTION_BITASSET_CREATE_VERSION;
 
-    // TODO controller output must be OP_RETURN for assets, unlike tokens
-    // they don't have a controller...
-
     // BitAsset info
     mtx.ticker = strTicker;
     mtx.headline = strHeadline;
     mtx.payload = hashPayload;
+
     // contoller output
-    mtx.vout.push_back(CTxOut(1, GetScriptForDestination(destControl)));
+    if (fImmutable)
+        mtx.vout.push_back(CTxOut(1, CScript() << OP_RETURN));
+    else
+        mtx.vout.push_back(CTxOut(1, GetScriptForDestination(destControl)));
+
     // genesis output
     mtx.vout.push_back(CTxOut(nSupply, GetScriptForDestination(destGenesis)));
 

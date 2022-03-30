@@ -129,7 +129,7 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
 
     {
         LOCK(vpwallets[0]->cs_wallet);
-        if (!vpwallets[0]->CreateAsset(tx, strFail, ticker, headline, payload, feeAmount, nSupply, strController, strOwner))
+        if (!vpwallets[0]->CreateAsset(tx, strFail, ticker, headline, payload, feeAmount, nSupply, strController, strOwner, fImmutable))
         {
             messageBox.setWindowTitle("Failed to create asset!");
             messageBox.setText("Error: " + QString::fromStdString(strFail));
