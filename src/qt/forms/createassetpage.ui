@@ -28,6 +28,9 @@
        <family>Noto Mono</family>
       </font>
      </property>
+     <property name="maxLength">
+      <number>7</number>
+     </property>
      <property name="placeholderText">
       <string>Enter BitAsset trading ticker</string>
      </property>
@@ -46,6 +49,9 @@
       <font>
        <family>Noto Mono</family>
       </font>
+     </property>
+     <property name="maxLength">
+      <number>50</number>
      </property>
      <property name="placeholderText">
       <string>Enter a tagline to describe the BitAsset</string>
