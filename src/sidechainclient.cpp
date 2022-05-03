@@ -206,7 +206,8 @@ bool SidechainClient::VerifyBMM(const uint256& hashMainBlock, const uint256& has
     json.append(hashMainBlock.ToString());
     json.append("\",\"");
     json.append(hashBMM.ToString());
-    json.append("\"");
+    json.append("\",");
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     // Try to request BMM proof from mainchain
@@ -275,7 +276,7 @@ uint256 SidechainClient::SendBMMRequest(const uint256& hashCritical, const uint2
     json.append("\",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",\"");
-    json.append(strPrevHash.substr(strPrevHash.size() - 4, strPrevHash.size() - 1));
+    json.append(strPrevHash.substr(strPrevHash.size() - 8, strPrevHash.size() - 1));
     json.append("\"");
     json.append("] }");
 
