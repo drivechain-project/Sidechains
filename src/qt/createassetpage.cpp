@@ -105,9 +105,9 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
         messageBox.exec();
         return;
     }
-    if (ui->lineEditHeader->text().isEmpty()) {
-        messageBox.setWindowTitle("Missing tagline!");
-        messageBox.setText("Please add a tagline and try again.");
+    if (ui->lineEditHeadline->text().isEmpty()) {
+        messageBox.setWindowTitle("Missing headline!");
+        messageBox.setText("Please add a headline and try again.");
         messageBox.exec();
         return;
     }
@@ -123,7 +123,7 @@ void CreateAssetPage::on_pushButtonCreate_clicked()
     CTransactionRef tx;
     std::string strFail = "";
     std::string ticker = ui->lineEditTicker->text().toStdString();
-    std::string headline = ui->lineEditTicker->text().toStdString();
+    std::string headline = ui->lineEditHeadline->text().toStdString();
     uint256 payload = uint256S(ui->lineEditHash->text().toStdString());
     int64_t nSupply = ui->spinBoxSupply->value();
 

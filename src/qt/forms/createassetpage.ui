@@ -39,12 +39,12 @@
    <item row="3" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Tagline:</string>
+      <string>Headline:</string>
      </property>
     </widget>
    </item>
    <item row="3" column="1">
-    <widget class="QLineEdit" name="lineEditHeader">
+    <widget class="QLineEdit" name="lineEditHeadline">
      <property name="font">
       <font>
        <family>Noto Mono</family>
@@ -54,7 +54,7 @@
       <number>50</number>
      </property>
      <property name="placeholderText">
-      <string>Enter a tagline to describe the BitAsset</string>
+      <string>Enter a short description of the BitAsset</string>
      </property>
     </widget>
    </item>

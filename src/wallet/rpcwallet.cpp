@@ -3774,15 +3774,15 @@ UniValue createasset(const JSONRPCRequest& request)
 
     // TODO check sizes
     // Ticker
-    std::string ticker = request.params[0].get_str();
-    if (ticker.empty()) {
+    std::string strTicker = request.params[0].get_str();
+    if (strTicker.empty()) {
         std::string strError = "Invalid ticker";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
     // Headline
-    std::string headline = request.params[1].get_str();
-    if (ticker.empty()) {
+    std::string strHeadline = request.params[1].get_str();
+    if (strHeadline.empty()) {
         std::string strError = "Invalid headline";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
@@ -3828,7 +3828,7 @@ UniValue createasset(const JSONRPCRequest& request)
 
     CTransactionRef tx;
     std::string strFail = "";
-    if (!pwallet->CreateAsset(tx, strFail, ticker, headline, payload, nFee, nSupply, request.params[5].get_str(), request.params[6].get_str()))
+    if (!pwallet->CreateAsset(tx, strFail, strTicker, strHeadline, payload, nFee, nSupply, request.params[5].get_str(), request.params[6].get_str()))
     {
         LogPrintf("%s: %s\n", __func__, strFail);
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
@@ -4391,7 +4391,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "createwithdrawalrefundrequest",    &createwithdrawalrefundrequest, {"id"} },
     { "sidechain",          "refundallwithdrawals",             &refundallwithdrawals,          {} },
 
-    { "BitAssets",          "createasset",                      &createasset,                   {"ticker", "tagline", "payload", "nfee", "nsupply", "controllerdest", "genesisdest"} },
+    { "BitAssets",          "createasset",                      &createasset,                   {"ticker", "headline", "payload", "nfee", "nsupply", "controllerdest", "genesisdest"} },
     { "BitAssets",          "listmyassets",                     &listmyassets,                  {} },
     { "BitAssets",          "transferasset",                    &transferasset,                 {"txid", "destination", "fee", "amount"} },
     { "BitAssets",          "transferassetcontrol",             &transferassetcontrol,          {"txid", "destination", "fee"} },
