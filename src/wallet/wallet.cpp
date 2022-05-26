@@ -2188,11 +2188,6 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
         const uint256& wtxid = entry.first;
         const CWalletTx* pcoin = &entry.second;
 
-        // TODO only asset outputs - make others available
-        // Skip BitAsset related outputs
-        if (pcoin->amountAssetIn > 0 || pcoin->tx->nVersion == TRANSACTION_BITASSET_CREATE_VERSION)
-            continue;
-
         if (!CheckFinalTx(*pcoin->tx))
             continue;
 
@@ -2248,7 +2243,20 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
         if (nDepth < nMinDepth || nDepth > nMaxDepth)
             continue;
 
+        CAmount amountAssetIn = pcoin->amountAssetIn;
+        CAmount amountAssetOut = CAmount(0);
+
         for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++) {
+            // Skip outputs until we have accounted for BitAsset input
+            if (amountAssetIn != amountAssetOut) {
+                amountAssetOut += pcoin->tx->vout[i].nValue;
+                continue;
+            }
+
+            // Skip controller & genesis output of asset creation tx
+            if (pcoin->tx->nVersion == TRANSACTION_BITASSET_CREATE_VERSION && i < 2)
+                continue;
+
             if (pcoin->tx->vout[i].nValue < nMinimumAmount || pcoin->tx->vout[i].nValue > nMaximumAmount)
                 continue;
 
@@ -3300,25 +3308,30 @@ bool CWallet::TransferAsset(std::string& strFail, uint256& txidOut, const uint25
     AvailableAssets(vOut, txid);
 
     if (vOut.empty()) {
-        strFail = "No BitAssets of this type in available!";
-        return false;
-    }
-    uint32_t nAssetID = vOut[0].tx->nAssetID;
-
-    CAmount nAmountAsset = CAmount(0);
-    for (const COutput& out : vOut)
-        nAmountAsset += out.tx->tx->vout[out.i].nValue;
-
-    if (nAmountAsset < nAmount) {
-        strFail = "Insufficient asset funds!";
+        strFail = "No BitAssets of this type available!";
         return false;
     }
 
     CMutableTransaction mtx;
 
-    // Add asset inputs
-    for (const COutput& out : vOut)
+    // Choose asset outputs to cover transfer
+    uint32_t nAssetID = vOut[0].tx->nAssetID;
+    CAmount nAmountAsset = CAmount(0);
+    std::vector<COutput> vAssetSpent;
+    for (const COutput& out : vOut) {
         mtx.vin.push_back(CTxIn(txid, out.i, CScript()));
+        vAssetSpent.push_back(out);
+
+        // Have we found enough?
+        nAmountAsset += out.tx->tx->vout[out.i].nValue;
+        if (nAmountAsset >= nAmount)
+            break;
+    }
+
+    if (nAmountAsset < nAmount) {
+        strFail = "Insufficient asset funds!";
+        return false;
+    }
 
     // Handle asset change
     const CAmount nAssetChange = nAmountAsset - nAmount;
@@ -3415,7 +3428,7 @@ bool CWallet::TransferAsset(std::string& strFail, uint256& txidOut, const uint25
     int nIn = 0;
 
     // Sign the asset inputs
-    for (const COutput& out : vOut) {
+    for (const COutput& out : vAssetSpent) {
         const CScript& scriptPubKey = out.tx->tx->vout[out.i].scriptPubKey;
         SignatureData sigdata;
 

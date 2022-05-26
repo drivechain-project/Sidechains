@@ -98,7 +98,8 @@ void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint3
             bool overwrite = check ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
             bool fAsset = amountAssetIn > amountAssetOut;
             bool fControl = nControlN >= 0 && (int)i == nControlN;
-            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fAsset, fControl, nNewAssetID ? nNewAssetID : nAssetID), overwrite);
+            uint32_t nID = nNewAssetID ? nNewAssetID : nAssetID;
+            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fAsset, fControl, fAsset ? nID : 0), overwrite);
             if (fAsset)
                 amountAssetOut += tx.vout[i].nValue;
         }
@@ -109,10 +110,13 @@ void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, uint3
         // 0: controller output
         // 1: genesis output
         // The rest are normal outputs
-        bool fBAC = tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION;
+        bool fNewAsset = tx.nVersion == TRANSACTION_BITASSET_CREATE_VERSION;
         for (size_t i = 0; i < tx.vout.size(); ++i) {
+            bool fAsset = fNewAsset && i < 2;
+            bool fControl = fNewAsset && i == 0;
+            uint32_t nID = nNewAssetID ? nNewAssetID : nAssetID;
             bool overwrite = check ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
-            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fBAC && i < 2 ? true : false, fBAC && i == 0, nNewAssetID ? nNewAssetID : nAssetID), overwrite);
+            cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fAsset, fControl, fAsset ? nID : 0), overwrite);
         }
     }
 }
