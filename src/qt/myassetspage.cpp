@@ -107,6 +107,8 @@ void MyAssetsPage::on_tableViewMyAssets_doubleClicked(const QModelIndex& index)
     AssetTransferDialog dialog;
     dialog.SetAsset(nID, txid, nAssetAmount, strTicker, strHeadline);
     dialog.exec();
+
+    tableModel->Update();
 }
 
 void MyAssetsPage::contextualMenu(const QPoint& point)

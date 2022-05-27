@@ -26,6 +26,7 @@ public:
 
 public Q_SLOTS:
     void on_pushButtonTransfer_clicked();
+    void on_pushButtonMax_clicked();
 
 private:
     Ui::AssetTransferDialog *ui;

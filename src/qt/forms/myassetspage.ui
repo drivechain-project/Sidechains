@@ -26,6 +26,19 @@
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <italic>true</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Assets will not be displayed until they have at least 1 confirmation, including change from transfers!</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

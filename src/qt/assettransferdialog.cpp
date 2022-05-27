@@ -108,6 +108,11 @@ void AssetTransferDialog::on_pushButtonTransfer_clicked()
     this->close();
 }
 
+void AssetTransferDialog::on_pushButtonMax_clicked()
+{
+    ui->amount->setValue(nAssetAmount);
+}
+
 bool AssetTransferDialog::validateFeeAmount()
 {
     if (!ui->amountFee->validate()) {
