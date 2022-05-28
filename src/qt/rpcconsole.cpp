@@ -502,7 +502,6 @@ RPCConsole::RPCConsole(const PlatformStyle *_platformStyle, QWidget *parent) :
 
     // Sidechain params tab
     ui->labelSidechainNumber->setText(QString::number(THIS_SIDECHAIN));
-    ui->labelAddressBytes->setText(QString::fromStdString(SIDECHAIN_ADDRESS_BYTES));
     ui->labelHashID1->setText(QString::fromStdString(SIDECHAIN_BUILD_TAR_HASH));
     ui->labelHashID2->setText(QString::fromStdString(SIDECHAIN_BUILD_COMMIT_HASH));
 }
