@@ -23,15 +23,14 @@
 //
 // TODO note to sidechain developers:
 //
-// SIDECHAIN_ADDRESS_BYTES, BUILD_COMMIT_HASH & BUILD_TAR_HASH all must be set
-// by you. Address bytes can be set before gitian building the first release,
-// build commit and tar hash must be set with the values from the first release.
+// You must update THIS_SIDECHAIN to the sidechain number that gets
+// assigned to this sidechain once activated.
+//
+// BUILD_COMMIT_HASH & BUILD_TAR_HASH all may be set by you.
 //
 // You must also update the genesis block, port numbers (including rpc server)
-// magic bytes, data directory, checkpoint blocks, and all other chainparams.
+// magic bytes, data directory, checkpoint blocks, and other chainparams.
 //
-// You also must update THIS_SIDECHAIN with the sidechain number that gets
-// assigned to this sidechain once activated.
 //
 //
 //
@@ -41,9 +40,6 @@
 
 //! Sidechain number
 static const unsigned int THIS_SIDECHAIN = 3;
-
-//! Sidechain address bytes
-static const std::string SIDECHAIN_ADDRESS_BYTES = "6636970264b02297c62d67b5d7a6db13eff9ec8cda73208481d70a461a5b05d0";
 
 //! Sidechain build commit hash
 static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "efe0934d9dd57d149205ed96c3ba0f5d9a798baf";
@@ -81,11 +77,6 @@ static const char WITHDRAWAL_SPENT = 's';
 static const char WITHDRAWAL_BUNDLE_CREATED = 'c';
 static const char WITHDRAWAL_BUNDLE_FAILED = 'f';
 static const char WITHDRAWAL_BUNDLE_SPENT = 'o';
-
-//! KeyID for testing
-static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
-//mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
-//cN5CqwXiaNWhNhx3oBQtA8iLjThSKxyZjfmieTsyMpG6NnHBzR7J
 
 //! Key ID for fee script
 static const std::string feeKey = "5f8f196a4f0c212fee1b4eda31e3ef383c52d9fc";
