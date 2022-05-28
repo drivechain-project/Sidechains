@@ -303,7 +303,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         hashLastDeposit = lastDeposit.dtx.GetHash();
         nBurnIndex = lastDeposit.nBurnIndex;
     }
-    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, nBurnIndex);
+    vDeposit = client.UpdateDeposits(hashLastDeposit, nBurnIndex);
 
     // Find new deposits
     std::vector<SidechainDeposit> vDepositNew;

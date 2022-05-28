@@ -51,7 +51,7 @@ bool SidechainClient::BroadcastWithdrawalBundle(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, uint32_t nLastBurnIndex)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const uint256& hashLastDeposit, uint32_t nLastBurnIndex)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -60,12 +60,12 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
-    json.append("[\"");
-    json.append(strAddressBytes);
+    json.append("[");
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     if (hashLastDeposit.IsNull()) {
-        json.append("\"] }");
+        json.append("] }");
     } else {
-        json.append("\",");
+        json.append(",");
         json.append("\"");
         json.append(hashLastDeposit.ToString());
         json.append("\",");
