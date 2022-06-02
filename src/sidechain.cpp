@@ -216,13 +216,14 @@ std::string GenerateDepositAddress(const std::string& strDestIn)
     strDepositAddress += strDestIn;
     strDepositAddress += "_";
 
-    // Generate checksum (first 6 bytes of SHA-256 hash)
+    // Generate checksum
     std::vector<unsigned char> vch;
     vch.resize(CSHA256::OUTPUT_SIZE);
     CSHA256().Write((unsigned char*)&strDepositAddress[0], strDepositAddress.size()).Finalize(&vch[0]);
     std::string strHash = HexStr(vch.begin(), vch.end());
 
-    // Append checksum bits
+    // Append checksum (first 6 letters of SHA-256 hash hex)
+
     strDepositAddress += strHash.substr(0, 6);
 
     return strDepositAddress;
