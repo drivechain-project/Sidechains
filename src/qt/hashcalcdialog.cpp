@@ -51,6 +51,64 @@ std::string HexToBinStr(const std::string strHex)
     return strBin;
 }
 
+std::string BinToHexStr(const std::string strBin)
+{
+    std::string strHex= "";
+    for (size_t i = 0; (i + 4) < strBin.size(); i += 4) {
+        std::string strBits = strBin.substr(i, 4);
+
+        if (strBits == "0000")
+            strHex += '0';
+        else
+        if (strBits == "0001")
+            strHex += '1';
+        else
+        if (strBits == "0010")
+            strHex += '2';
+        else
+        if (strBits == "0011")
+            strHex += '3';
+        else
+        if (strBits == "0100")
+            strHex += '4';
+        else
+        if (strBits == "0101")
+            strHex += '5';
+        else
+        if (strBits == "0110")
+            strHex += '6';
+        else
+        if (strBits == "0111")
+            strHex += '7';
+        else
+        if (strBits == "1000")
+            strHex += '8';
+        else
+        if (strBits == "1001")
+            strHex += '9';
+        else
+        if (strBits == "1010")
+            strHex += 'a';
+        else
+        if (strBits == "1011")
+            strHex += 'b';
+        else
+        if (strBits == "1100")
+            strHex += 'c';
+        else
+        if (strBits == "1101")
+            strHex += 'd';
+        else
+        if (strBits == "1110")
+            strHex += 'e';
+        else
+        if (strBits == "1111")
+            strHex += 'f';
+    }
+
+    return strHex;
+}
+
 HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::HashCalcDialog),
@@ -78,17 +136,8 @@ HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *par
     ui->pushButtonHexWarningHMAC->setIcon(platformStyle->SingleColorIcon(":/icons/warning"));
 
     // Make text browsers transparent
-    ui->textBrowserHex->setStyleSheet("background: rgb(0,0,0,0)");
-    ui->textBrowserDecode->setStyleSheet("background: rgb(0,0,0,0)");
-    // Also set font to gray
-    ui->textBrowserHexBIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserSHA256BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserSHA512BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserHash160BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserHash256BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserRIPEMDBIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserHMAC256BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
-    ui->textBrowserHMAC512BIN->setStyleSheet("background: rgb(0,0,0,0); color: gray");
+    ui->textBrowserOutput->setStyleSheet("background: rgb(0,0,0,0)");
+    ui->textBrowserOutputHMAC->setStyleSheet("background: rgb(0,0,0,0)");
 
     ui->pushButtonFlip->setEnabled(false);
 }
@@ -173,28 +222,16 @@ void HashCalcDialog::ShowInvalidHexWarning(bool fShow)
 
 void HashCalcDialog::ClearOutput()
 {
-    ui->labelSHA256D->clear();
-    ui->labelHash160->clear();
-    ui->labelRIPEMD160->clear();
-    ui->labelSHA256->clear();
-    ui->labelSHA512->clear();
-    ui->textBrowserHex->clear();
-    ui->textBrowserHexBIN->clear();
-    ui->textBrowserDecode->clear();
-
-    ui->textBrowserSHA256BIN->clear();
-    ui->textBrowserSHA512BIN->clear();
-    ui->textBrowserHash160BIN->clear();
-    ui->textBrowserHash256BIN->clear();
-    ui->textBrowserRIPEMDBIN->clear();
+    ui->textBrowserOutput->clear();
 }
 
 void HashCalcDialog::UpdateOutput()
 {
+    ClearOutput();
+
     const std::string str = ui->plainTextEdit->toPlainText().toStdString();
 
     if (str.empty()) {
-        ClearOutput();
         ShowInvalidHexWarning(false);
         return;
     }
@@ -204,7 +241,6 @@ void HashCalcDialog::UpdateOutput()
 
     if (fHexChecked && !fHex) {
         ShowInvalidHexWarning(true);
-        ClearOutput();
         return;
     } else if (fHexChecked && fHex) {
         ShowInvalidHexWarning(false);
@@ -214,33 +250,41 @@ void HashCalcDialog::UpdateOutput()
     std::vector<unsigned char> vBytes = ParseHex(str);
 
     // CHash256 (SHA256D)
+    ui->textBrowserOutput->append("<b>SHA256D:</b>");
     if (fHexChecked) {
         uint256 hash = Hash(vBytes.begin(), vBytes.end());
-        ui->labelSHA256D->setText(QString::fromStdString(hash.ToString()));
-        ui->textBrowserHash256BIN->setText(QString::fromStdString(HexToBinStr(hash.ToString())));
+        std::string strHex = hash.GetHex();
+
+        ui->textBrowserOutput->append(QString::fromStdString(hash.ToString()) + "\n");
+        ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex)) + "<br>");
     }
     else {
         std::vector<unsigned char> vch256D;
         vch256D.resize(CHash256::OUTPUT_SIZE);
         CHash256().Write((unsigned char*)&str[0], str.size()).Finalize(&vch256D[0]);
         std::string strHex = HexStr(vch256D.begin(), vch256D.end());
-        ui->labelSHA256D->setText(QString::fromStdString(strHex));
-        ui->textBrowserHash256BIN->setText(QString::fromStdString(HexToBinStr(strHex)));
+
+        ui->textBrowserOutput->append(QString::fromStdString(strHex) + "\n");
+        ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex)) + "<br>");
     }
 
     // CHash160 (SHA256 + ripemd160)
+    ui->textBrowserOutput->append("<b>Hash160 - RIPEMD160(SHA256):</b>");
     if (fHexChecked) {
         uint160 hash = Hash160(vBytes.begin(), vBytes.end());
-        ui->labelHash160->setText(QString::fromStdString(hash.ToString()));
-        ui->textBrowserHash160BIN->setText(QString::fromStdString(HexToBinStr(hash.ToString())));
+        std::string strHex160 = hash.GetHex();
+
+        ui->textBrowserOutput->append(QString::fromStdString(hash.ToString()) + "\n");
+        ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex160)) + "<br>");
     }
     else {
         std::vector<unsigned char> vchHash160;
         vchHash160.resize(CHash160::OUTPUT_SIZE);
         CHash160().Write((unsigned char*)&str[0], str.size()).Finalize(&vchHash160[0]);
         std::string strHex = HexStr(vchHash160.begin(), vchHash160.end());
-        ui->labelHash160->setText(QString::fromStdString(strHex));
-        ui->textBrowserHash160BIN->setText(QString::fromStdString(HexToBinStr(strHex)));
+
+        ui->textBrowserOutput->append(QString::fromStdString(strHex) + "\n");
+        ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex)) + "<br>");
     }
 
     // RIPEMD160
@@ -252,8 +296,9 @@ void HashCalcDialog::UpdateOutput()
         CRIPEMD160().Write((unsigned char*)&str[0], str.size()).Finalize(&vch160[0]);
 
     std::string strHex160 = HexStr(vch160.begin(), vch160.end());
-    ui->labelRIPEMD160->setText(QString::fromStdString(strHex160));
-    ui->textBrowserRIPEMDBIN->setText(QString::fromStdString(HexToBinStr(strHex160)));
+    ui->textBrowserOutput->append("<b>RIPEMD160:</b>");
+    ui->textBrowserOutput->append(QString::fromStdString(strHex160) + "\n");
+    ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex160)) + "<br>");
 
     // SHA256
     std::vector<unsigned char> vch256;
@@ -264,8 +309,9 @@ void HashCalcDialog::UpdateOutput()
         CSHA256().Write((unsigned char*)&str[0], str.size()).Finalize(&vch256[0]);
 
     std::string strHex256 = HexStr(vch256.begin(), vch256.end());
-    ui->labelSHA256->setText(QString::fromStdString(strHex256));
-    ui->textBrowserSHA256BIN->setText(QString::fromStdString(HexToBinStr(strHex256)));
+    ui->textBrowserOutput->append("<b>SHA256:</b>");
+    ui->textBrowserOutput->append(QString::fromStdString(strHex256) + "\n");
+    ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex256)) + "<br>");
 
     // SHA512
     std::vector<unsigned char> vch512;
@@ -276,32 +322,39 @@ void HashCalcDialog::UpdateOutput()
         CSHA512().Write((unsigned char*)&str[0], str.size()).Finalize(&vch512[0]);
 
     std::string strHex512 = HexStr(vch512.begin(), vch512.end());
-    ui->labelSHA512->setText(QString::fromStdString(HexStr(vch512.begin(), vch512.end())));
-    ui->textBrowserSHA512BIN->setText(QString::fromStdString(HexToBinStr(strHex512)));
+    ui->textBrowserOutput->append("<b>SHA512:</b>");
+    ui->textBrowserOutput->append(QString::fromStdString(strHex512) + "\n");
+    ui->textBrowserOutput->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex512)) + "<br>");
 
     // Decode
     if (fHexChecked) {
         std::string strDecode;
         for (size_t i = 0; i < vBytes.size(); i++)
             strDecode += vBytes[i];
-        ui->textBrowserDecode->setText(QString::fromStdString(strDecode));
+        ui->textBrowserOutput->append("<b>Decode:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(strDecode) + "\n");
     } else {
-        ui->textBrowserDecode->setText(QString::fromStdString(str));
+        ui->textBrowserOutput->append("<b>Decode:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(str) + "\n");
     }
 
     // Hex
     if (fHexChecked) {
-        ui->textBrowserHex->setText(QString::fromStdString(str));
-        ui->textBrowserHexBIN->setText(QString::fromStdString(HexToBinStr(str)));
+        ui->textBrowserOutput->append("<b>Hex:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(str) + "\n");
+        ui->textBrowserOutput->append("<b>Bin:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(HexToBinStr(str)) + "<br>");
     }
     else {
         std::string strHex = HexStr(str.begin(), str.end());
-        ui->textBrowserHex->setText(QString::fromStdString(strHex));
-        ui->textBrowserHexBIN->setText(QString::fromStdString(HexToBinStr(strHex)));
+        ui->textBrowserOutput->append("<b>Hex:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(strHex) + "\n");
+        ui->textBrowserOutput->append("<b>Bin:</b>");
+        ui->textBrowserOutput->append(QString::fromStdString(HexToBinStr(strHex)) + "<br>");
     }
 
-    // Scroll to bottom
-    ui->textBrowserHex->verticalScrollBar()->setValue(ui->textBrowserHex->verticalScrollBar()->maximum());
+    // Scroll to top
+    ui->textBrowserOutput->verticalScrollBar()->setValue(ui->textBrowserOutput->verticalScrollBar()->minimum());
 }
 
 void HashCalcDialog::on_pushButtonFlip_clicked()
@@ -336,7 +389,6 @@ void HashCalcDialog::on_pushButtonClearHMAC_clicked()
 {
     ui->lineEditHMACKey->clear();
     ui->plainTextEditHMAC->clear();
-
 }
 
 void HashCalcDialog::on_pushButtonHelpHMAC_clicked()
@@ -394,14 +446,13 @@ void HashCalcDialog::ShowInvalidHexWarningHMAC(bool fShow)
 
 void HashCalcDialog::ClearOutputHMAC()
 {
-    ui->labelHMACSHA256->clear();
-    ui->labelHMACSHA512->clear();
-    ui->textBrowserHMAC256BIN->clear();
-    ui->textBrowserHMAC512BIN->clear();
+    ui->textBrowserOutputHMAC->clear();
 }
 
 void HashCalcDialog::UpdateOutputHMAC()
 {
+    ClearOutputHMAC();
+
     const std::string strKey = ui->lineEditHMACKey->text().toStdString();
     const std::string strData = ui->plainTextEditHMAC->toPlainText().toStdString();
 
@@ -442,8 +493,10 @@ void HashCalcDialog::UpdateOutputHMAC()
         CHMAC_SHA256((unsigned char*)&strKey[0], strKey.size()).Write((unsigned char*)&strData[0], strData.size()).Finalize(&vch256[0]);
 
     std::string strHex256 = HexStr(vch256.begin(), vch256.end());
-    ui->labelHMACSHA256->setText(QString::fromStdString(strHex256));
-    ui->textBrowserHMAC256BIN->setText(QString::fromStdString(HexToBinStr(strHex256)));
+
+    ui->textBrowserOutputHMAC->append("<b>HMAC-SHA256:</b>");
+    ui->textBrowserOutputHMAC->append(QString::fromStdString(strHex256) + "\n");
+    ui->textBrowserOutputHMAC->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex256)) + "<br>");
 
     // HMAC-SHA512
     std::vector<unsigned char> vch512;
@@ -454,6 +507,8 @@ void HashCalcDialog::UpdateOutputHMAC()
         CHMAC_SHA512((unsigned char*)&strKey[0], strKey.size()).Write((unsigned char*)&strData[0], strData.size()).Finalize(&vch512[0]);
 
     std::string strHex512 = HexStr(vch512.begin(), vch512.end());
-    ui->labelHMACSHA512->setText(QString::fromStdString(strHex512));
-    ui->textBrowserHMAC512BIN->setText(QString::fromStdString(HexToBinStr(strHex512)));
+
+    ui->textBrowserOutputHMAC->append("<b>HMAC-SHA512:</b>");
+    ui->textBrowserOutputHMAC->append(QString::fromStdString(strHex512) + "\n");
+    ui->textBrowserOutputHMAC->append("<font color=\"gray\" size=2px>" + QString::fromStdString(HexToBinStr(strHex512)) + "<br>");
 }
