@@ -725,6 +725,27 @@ UniValue rebroadcastwithdrawalbundle(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue getwithdrawalbundle(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "getwithdrawalbundle\n"
+            "\nGet the latest WithdrawalBundle transaction hex.\n"
+        );
+
+    SidechainWithdrawalBundle withdrawalBundle;
+    uint256 hashLatest;
+    psidechaintree->GetLastWithdrawalBundleHash(hashLatest);
+
+    if (hashLatest.IsNull())
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to lookup latest WithdrawalBundle hash!");
+
+    if (!psidechaintree->GetWithdrawalBundle(hashLatest, withdrawalBundle))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to load latest WithdrawalBundle from database");
+
+    return EncodeHexTx(withdrawalBundle.tx);
+}
+
 UniValue getwithdrawal(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
@@ -837,6 +858,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "getaveragemainchainfees",      &getaveragemainchainfees,       {"blockcount", "startheight"}},
     { "sidechain",          "getmainchainblockcount",       &getmainchainblockcount,        {}},
     { "sidechain",          "getmainchainblockhash",        &getmainchainblockhash,         {"height"}},
+    { "sidechain",          "getwithdrawalbundle",          &getwithdrawalbundle,           {}},
     { "sidechain",          "verifymainblockcache",         &verifymainblockcache,          {}},
     { "sidechain",          "updatemainblockcache",         &updatemainblockcache,          {}},
     { "sidechain",          "listmywithdrawals",            &listmywithdrawals,             {}},
