@@ -499,7 +499,7 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     // Whether or not to create a new BMM block / request if possible. If set
     // false, we will only check for BMM commits in the mainchain and try to
     // connect those blocks but not generate a new BMM block and request.
-    bool fCreateNew = request.params[1].isNull() ? true : request.params[1].get_bool();
+    bool fCreateNew = request.params.size() >= 2 ? request.params[1].get_bool() : true;
 
     // If hashPrevBlock is set, we will build a block on top of that block
     // instead of the current sidechain tip.
@@ -822,7 +822,7 @@ static const CRPCCommand commands[] =
     { "hidden",             "getinfo",                  &getinfo_deprecated,       {}},
 
     /* Sidechain RPC functions */
-    { "sidechain",          "refreshbmm",                   &refreshbmm,                    {}},
+    { "sidechain",          "refreshbmm",                   &refreshbmm,                    {"amount", "createnew", "prevblock"}},
     { "sidechain",          "getaveragemainchainfees",      &getaveragemainchainfees,       {"blockcount", "startheight"}},
     { "sidechain",          "getmainchainblockcount",       &getmainchainblockcount,        {}},
     { "sidechain",          "getmainchainblockhash",        &getmainchainblockhash,         {"height"}},
