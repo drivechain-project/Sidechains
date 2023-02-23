@@ -77,6 +77,10 @@ const std::string BitcoinGUI::DEFAULT_UIPLATFORM =
 #endif
         ;
 
+#include <boost/bind/placeholders.hpp>
+
+using namespace boost::placeholders;
+
 static constexpr int HEADER_HEIGHT_DELTA_SYNC = 24;
 
 /** Display name for default wallet name. Uses tilde to avoid name
