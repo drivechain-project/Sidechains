@@ -33,6 +33,8 @@
 #include <ui_interface.h>
 #include <util.h>
 
+using namespace boost::placeholders;
+
 // For getting the latest WithdrawalBundle hash
 // TODO make the latest WithdrawalBundle hash get set in the client model or somewhere else
 // instead of looking it up here.

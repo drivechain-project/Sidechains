@@ -7,6 +7,7 @@
 
 #include <QWidget>
 #include <QQueue>
+#include <QPainter>
 
 class ClientModel;
 

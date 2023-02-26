@@ -26,6 +26,8 @@
 #include <QPainter>
 #include <QRadialGradient>
 
+using namespace boost::placeholders;
+
 SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) :
     QWidget(0, f), curAlignment(0)
 {
